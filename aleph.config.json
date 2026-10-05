@@ -1,12 +1,17 @@
 {
-  "step": 2,
+  "step": 3,
   "repoUrl": "https://github.com/myeongjundev/choi-bujang-secret-vault",
   "publicAppUrl": "https://choi-bujang-secret-vault-sigma.vercel.app",
   "sampleMarker": "SAMPLE_NOTE_1",
   "judgeIssuer": "https://aleph-judge-production.up.railway.app/defense/judge",
-  "identityProvider": null,
+  "identityProvider": {
+    "issuer": "https://cenxyqdoulktaqtkskeh.supabase.co/auth/v1",
+    "audience": "authenticated",
+    "jwksUrl": "https://cenxyqdoulktaqtkskeh.supabase.co/auth/v1/.well-known/jwks.json"
+  },
   "allowedRoutes": [
-    "/api/notes"
+    "/api/notes",
+    "/api/notes/:id"
   ],
   "originalApiUrl": null,
   "restoreRoute": null

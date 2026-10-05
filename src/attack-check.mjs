@@ -1,6 +1,24 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
+  if (config.step === 3) {
+    const request = (path, method = 'GET', authorization) => fetch(new URL(path, config.publicAppUrl), {
+      method, redirect: 'error', signal: AbortSignal.timeout(10000),
+      headers: authorization ? { Authorization: authorization } : {},
+    });
+    const results = [];
+    for (const [id, path, method, authorization] of [
+      ['anonymous_read', '/api/notes', 'GET', undefined],
+      ['anonymous_create', '/api/notes', 'POST', undefined],
+      ['malformed_token', '/api/notes', 'GET', 'Bearer invalid'],
+      ['static_seed', '/data.json', 'GET', undefined],
+    ]) {
+      const response = await request(path, method, authorization);
+      results.push({ attackId: id, expected: id === 'static_seed' ? '404' : '401; 자료 없음', observed: `HTTP ${response.status}` });
+      await response.text();
+    }
+    return results;
+  }
   if (config.step === 2) {
     const app = new URL(config.publicAppUrl);
     if (app.protocol !== 'https:' || app.username || app.password || app.pathname !== '/' || app.search || app.hash) {
