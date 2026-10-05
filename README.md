@@ -1,6 +1,6 @@
-# BYTE BACK 자료실 · 4단계 저장점
+# BYTE BACK 자료실 · 5단계 저장점
 
-1~3단계 운영 심판 각 100/100점을 확인했습니다. 현재 4단계 소유권 검사를 구현하며 4단계 운영 판정은 아직 미실행입니다.
+1~4단계 운영 심판 각 100/100점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다. 5단계 운영 판정은 아직 미실행입니다.
 
 배포: https://choi-bujang-secret-vault-sigma.vercel.app
 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
@@ -27,6 +27,10 @@ npm run bundle의 직접 점검은 자기 점검이며 심판 판정이 아닙�
 
 ## 4단계 DB 권한 검토
 
-sql/stage4.sql은 user_notes만 변경하며 자료를 삭제하지 않습니다. PUBLIC/anon/authenticated의 기존 권한을 회수한 뒤 authenticated에 SELECT/INSERT/UPDATE/DELETE만 부여합니다. 네 명령의 RLS USING/WITH CHECK로 auth.uid()=owner_id를 적용하며 restrictive 정책으로 기존 permissive 정책의 우회를 막습니다. 적용 전후 role_table_grants와 has_table_privilege 결과를 대조합니다. 현재 적용 승인 대기 중입니다.
+sql/stage4.sql은 당시 직접 로그인 접근을 위한 설계 자료이며 실행하지 않았습니다. 5단계에서는 권한 추가 방향을 중단하고 sql/stage5.sql로 user_notes의 PUBLIC/anon/authenticated 직접 권한을 모두 회수합니다. RLS와 service_role의 서버 CRUD 권한은 유지합니다. 다른 테이블과 기존 자료는 보존합니다. 적용 전후 role_table_grants 및 has_table_privilege를 비교합니다.
+
+브라우저의 Supabase 직접 메모 호출은 없음입니다. src/browser.mjs는 로그인(Auth)만 직접 호출하고 메모는 /api/notes 및 /api/notes/:id로 요청합니다. 원본 API는 https://cenxyqdoulktaqtkskeh.supabase.co/rest/v1/user_notes 이며 쿼리 없이 originalApiUrl에 기록합니다. 5단계 공개 배포 메타데이터에는 시드 표식을 내보내지 않습니다.
+
+전용 프로젝트에 5단계 권한 회수 SQL을 적용했습니다. PUBLIC/anon/authenticated 직접 grant 0개, anon/authenticated의 7종 권한 모두 false를 확인했습니다. RLS는 유지되며 기존 가상 메모 네 건을 보존했습니다. 실제 사용자 로그인 수동 시험은 별도로 미실행입니다. 로컬 A/B 정상 CRUD·교차 거부 시험 7개는 통과했습니다.
 
 A/B 초기 자료 소유자 연결은 실제 계정 준비 뒤 별도로 검토할 작업입니다. 기존 notes 네 건의 소유자나 본문을 임의로 바꾸지 않았습니다. 로컬 A/B 회귀시험은 양쪽 정상 CRUD, 교차 조회·수정·삭제 거부와 상대 행 보존, 소유자 변경 거부를 확인합니다.

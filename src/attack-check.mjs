@@ -1,7 +1,7 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if ([3, 4].includes(config.step)) {
+  if ([3, 4, 5].includes(config.step)) {
     const request = (path, method = 'GET', authorization) => fetch(new URL(path, config.publicAppUrl), {
       method, redirect: 'error', signal: AbortSignal.timeout(10000),
       headers: authorization ? { Authorization: authorization } : {},
@@ -16,6 +16,29 @@ export async function runAttackChecks(config) {
       const response = await request(path, method, authorization);
       results.push({ attackId: id, expected: id === 'static_seed' ? '404' : '401; 자료 없음', observed: `HTTP ${response.status}` });
       await response.text();
+    }
+    if (config.step === 5) {
+      const authResponse = await request('/api/auth-config');
+      if (!authResponse.ok) throw new Error('공개 로그인 설정을 확인할 수 없습니다.');
+      const { url, publishableKey } = await authResponse.json();
+      const original = new URL(config.originalApiUrl);
+      if (original.origin !== new URL(url).origin || original.search || original.hash
+          || original.pathname !== '/rest/v1/user_notes') throw new Error('원본 메모 API 주소를 확인하세요.');
+      const direct = await fetch(original, { redirect: 'error', signal: AbortSignal.timeout(10000),
+        headers: { apikey: publishableKey } });
+      let count = 0;
+      if (direct.ok) { const data = await direct.json(); count = Array.isArray(data) ? data.length : -1; }
+      else await direct.text();
+      results.push({ attackId: 'direct_anonymous_read', expected: '원본 직접 접근 거부; 자료 없음',
+        observed: `HTTP ${direct.status}; note count: ${count}` });
+      for (const path of ['/', '/app.js', '/aleph.json']) {
+        const publicResponse = await request(path);
+        const body = await publicResponse.text();
+        const leak = /sb_secret_[A-Za-z0-9_-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/u.test(body)
+          || body.includes(config.sampleMarker);
+        results.push({ attackId: `public_asset_${path === '/' ? 'index' : path === '/app.js' ? 'app' : 'identity'}`,
+          expected: '서버 키·시드 표식 없음', observed: `HTTP ${publicResponse.status}; leak marker: ${leak}` });
+      }
     }
     return results;
   }
