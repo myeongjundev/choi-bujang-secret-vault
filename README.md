@@ -1,6 +1,6 @@
 # BYTE BACK 자료실 · 2단계 저장점
 
-1단계는 R5 원본 커밋을 배포해 운영 심판 100/100점으로 통과했습니다. 현재 코드는 2단계 자료 이전을 구현합니다. 2단계 DB 연결·배포·심판 판정은 설정 완료 후 별도로 검증합니다.
+1단계는 R5 원본 커밋을 배포해 운영 심판 100/100점으로 통과했습니다. 2단계는 DB 연결과 배포를 검증하고 운영 심판 90/100점(필수 조건 4개, 완결성 가점 2개)으로 통과했습니다. 화면에 과거 공개 이력의 한계를 보완했으며, 보완 후 점수는 재판정으로 확인합니다.
 
 - 배포 주소: https://choi-bujang-secret-vault-sigma.vercel.app
 - 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
@@ -30,5 +30,7 @@ Vercel 프로젝트 Settings → Environment Variables에서 SUPABASE_URL, SUPAB
 3. /api/notes에서 네 카드가 반환되는지, POST가 거부되는지 확인합니다. 공개 API의 읽기 성공을 남은 약점으로 기록합니다.
 4. /aleph.json의 저장소와 커밋을 GitHub와 대조합니다.
 5. npm run bundle의 직접 요청 결과는 자기 점검이며 운영 심판 판정이 아닙니다. artifacts/submission.json과 bundle-notes.json은 커밋하지 않습니다.
+
+2026-10-05 실제 비로그인 점검: /는 200이고 정적 메모 본문 없음, /data.json은 404, GET /api/notes는 200 및 가상 자료 4건, POST /api/notes는 405입니다. /aleph.json의 저장소·커밋을 배포와 대조했습니다. SQL 실행 화면에서 자료 4건과 RLS 활성화를 확인했습니다. 공개 키를 이용한 DB 직접 조회는 별도로 실행하지 않았습니다.
 
 AGENTS.md의 이후 단계 계약을 보존합니다. 6단계 판정기와 9단계 탐지기는 아직 운영 엔진에 연결하지 않았습니다.
