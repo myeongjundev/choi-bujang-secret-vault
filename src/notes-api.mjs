@@ -37,11 +37,11 @@ export function createNotesHandler({ item = false, env = process.env,
       let result;
       if (req.method === 'GET') {
         const query = db.from('user_notes').select(fields);
-        result = item ? await query.eq('id', id).maybeSingle()
+        result = item ? await query.eq('id', id).eq('owner_id', user.userId).maybeSingle()
           : await query.eq('owner_id', user.userId).order('created_at');
       } else if (req.method === 'DELETE') {
-        // Stage 4 adds ownership checks to single-note operations.
-        result = await db.from('user_notes').delete().eq('id', id).select('id').maybeSingle();
+        // Ownership is part of each SQL operation, avoiding a check/use race.
+        result = await db.from('user_notes').delete().eq('id', id).eq('owner_id', user.userId).select('id').maybeSingle();
       } else {
         let body = req.body;
         if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = null; } }
@@ -51,10 +51,13 @@ export function createNotesHandler({ item = false, env = process.env,
             || (req.method === 'POST' && body.id !== undefined && (typeof body.id !== 'string' || !UUID.test(body.id)))) {
           return res.status(400).json({ error: 'invalid_note' });
         }
+        if (req.method === 'PUT' && Object.keys(body).some(key => !['title', 'body'].includes(key))) {
+          return res.status(400).json({ error: 'invalid_note' });
+        }
         const value = { title: body.title.trim(), body: body.body };
         result = req.method === 'POST'
           ? await db.from('user_notes').insert({ ...value, id: body.id ?? randomUUID(), owner_id: user.userId }).select(fields).single()
-          : await db.from('user_notes').update(value).eq('id', id).select(fields).maybeSingle();
+          : await db.from('user_notes').update(value).eq('id', id).eq('owner_id', user.userId).select(fields).maybeSingle();
       }
       if (result.error) return res.status(result.error.code === '23505' ? 409 : 502).json({ error: 'storage_unavailable' });
       if (item && !result.data) return res.status(404).json({ error: 'note_not_found' });

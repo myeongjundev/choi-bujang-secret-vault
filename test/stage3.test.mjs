@@ -36,11 +36,11 @@ test('CRUD uses verified owner and supports create, read, update, delete, then 4
   function clientFactory() {
     return { from(table) {
       assert.equal(table,'user_notes');
-      let action='read', value, filter;
-      const q={select(){return q;},insert(v){action='insert';value=v;return q;},update(v){action='update';value=v;return q;},delete(){action='delete';return q;},eq(k,v){filter=[k,v];return q;},
-        async order(){return {data:[...rows.values()].filter(r=>r.owner_id===filter[1]).map(({id,title,body})=>({id,title,body})),error:null};},
+      let action='read', value; const filters=[];
+      const q={select(){return q;},insert(v){action='insert';value=v;return q;},update(v){action='update';value=v;return q;},delete(){action='delete';return q;},eq(k,v){filters.push([k,v]);return q;},
+        async order(){return {data:[...rows.values()].filter(r=>filters.every(([k,v])=>r[k]===v)).map(({id,title,body})=>({id,title,body})),error:null};},
         async single(){return q.maybeSingle();},async maybeSingle(){
-          let row=action==='insert'?value:rows.get(filter[1]);
+          let row=action==='insert'?value:[...rows.values()].find(r=>filters.every(([k,v])=>r[k]===v));
           if(action==='insert')rows.set(row.id,row);
           if(row&&action==='update')Object.assign(row,value);
           if(row&&action==='delete')rows.delete(row.id);

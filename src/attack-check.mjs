@@ -1,7 +1,7 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if (config.step === 3) {
+  if ([3, 4].includes(config.step)) {
     const request = (path, method = 'GET', authorization) => fetch(new URL(path, config.publicAppUrl), {
       method, redirect: 'error', signal: AbortSignal.timeout(10000),
       headers: authorization ? { Authorization: authorization } : {},
