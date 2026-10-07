@@ -1,0 +1,4 @@
+[
+  { "name": "auth_failure_burst", "condition": "같은 출발 주소·계정의 집계 로그인 실패 20건 이상, 5분 이내 또는 센서의 연속 실패 경보, 수준 10 이상; 단일 실패 및 성공은 제외", "minCount": 20, "maxWindowSeconds": 300, "minLevel": 10, "evidence": "MITRE ATT&CK T1110은 반복적인 비밀번호 추측을 설명한다. 수치 임계값은 이 학습 정책의 설정이다.", "source": "https://attack.mitre.org/techniques/T1110/" },
+  { "name": "password_spray", "condition": "같은 출발 주소에서 5개 이상 계정에 같은 비밀번호 또는 일정한 간격의 실패가 집계됨; 수준 10 이상이며 순회 근거가 필요", "minAccounts": 5, "minCount": 10, "minLevel": 10, "evidence": "MITRE ATT&CK T1110.003은 여러 계정에 비밀번호를 대입하는 password spraying을 설명한다. 경보에 비밀번호 원문은 필요하지 않다.", "source": "https://attack.mitre.org/techniques/T1110/003/" }
+]

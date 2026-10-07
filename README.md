@@ -1,6 +1,6 @@
 # BYTE BACK 자료실 · 5단계 저장점
 
-1~4단계 운영 심판 각 100/100점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다. 5단계 운영 판정은 아직 미실행입니다.
+1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
 
 배포: https://choi-bujang-secret-vault-sigma.vercel.app
 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
@@ -34,3 +34,9 @@ sql/stage4.sql은 당시 직접 로그인 접근을 위한 설계 자료이며 �
 전용 프로젝트에 5단계 권한 회수 SQL을 적용했습니다. PUBLIC/anon/authenticated 직접 grant 0개, anon/authenticated의 7종 권한 모두 false를 확인했습니다. RLS는 유지되며 기존 가상 메모 네 건을 보존했습니다. 실제 사용자 로그인 수동 시험은 별도로 미실행입니다. 로컬 A/B 정상 CRUD·교차 거부 시험 7개는 통과했습니다.
 
 A/B 초기 자료 소유자 연결은 실제 계정 준비 뒤 별도로 검토할 작업입니다. 기존 notes 네 건의 소유자나 본문을 임의로 바꾸지 않았습니다. 로컬 A/B 회귀시험은 양쪽 정상 CRUD, 교차 조회·수정·삭제 거부와 상대 행 보존, 소유자 변경 거부를 확인합니다.
+
+## XDR 보너스 학습 모듈
+
+무차별 로그인 및 웹 주입 모듈은 xdr/README.md에 실행·패턴·만료 규칙을 기록했습니다. 공식 가상 Wazuh 경보만 사용하며 기존 자료실 API·로그인·src/decider.mjs의 기본 규칙은 변경하지 않습니다. 이 판정기는 현재 starter.deny만 읽어 기본 거부하며 운영 반 엔진에 연결하지 않았습니다. 추가 XDR deny overlay는 별도 모듈이며 확인된 릴레이 출발 주소가 있는 호스트에서만 사용할 수 있습니다.
+
+npm run xdr:run -- brute-force 및 npm run xdr:run -- web-injection 으로 result.json을 다시 생성합니다. 모호한 경보의 실제 Jev 연결 정보가 없으므로 현재는 unavailable 알림 fallback이며, Jev 응답을 받았다고 기록하지 않습니다. npm run xdr:replay는 허용하는 시험용 기본 정책을 사용한 연결 모의 시험이고 운영 접속 판정이 아닙니다. 보너스 운영 판정은 제출 후 별도로 확인합니다.
