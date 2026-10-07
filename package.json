@@ -9,6 +9,7 @@
     "decider:test": "node scripts/decider-test.mjs",
     "detect:test": "node scripts/detect-test.mjs",
     "fixture:7": "node scripts/fixture-7.mjs",
+    "xdr:build": "node scripts/build-xdr.mjs",
     "xdr:run": "node scripts/xdr-run.mjs",
     "xdr:replay": "node scripts/xdr-replay.mjs",
     "xdr:test": "node --test test/xdr.test.mjs"

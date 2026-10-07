@@ -1,18 +1,28 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { decide as brute } from '../xdr/brute-force/decide.mjs';
+import { decide as brute, setJevReviewer } from '../xdr/brute-force/decide.mjs';
 import { decide as web } from '../xdr/web-injection/decide.mjs';
 import { readAlerts as readBrute } from '../xdr/brute-force/read-alerts.mjs';
 import { readAlerts as readWeb } from '../xdr/web-injection/read-alerts.mjs';
 import { projectAlert } from '../xdr/read-alerts.mjs';
-import { setJevReviewer, decision } from '../xdr/jev.mjs';
+import { decision } from '../xdr/jev.mjs';
 import { ruleFor, withXdr } from '../xdr/ztna-overlay.mjs';
 
 const sample = ({ level = 12, description, count, url, accounts } = {}) => ({
   id: 'test-event', timestamp: '2026-10-07T10:00:00Z',
   rule: { level, description, mitre: [] },
   data: { srcip: '192.0.2.90', srcuser: 'user01', count, url, accounts },
+});
+test('submitted deciders execute as isolated modules without repository imports', async () => {
+  for (const key of ['brute-force', 'web-injection']) {
+    const code = await readFile(new URL(`../xdr/${key}/decide.mjs`, import.meta.url), 'utf8');
+    assert.doesNotMatch(code, /^import\s/mu);
+    const isolated = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+    const fixture = JSON.parse(await readFile(new URL(`../xdr/fixtures/${key}.json`, import.meta.url), 'utf8'));
+    const local = key === 'brute-force' ? brute : web;
+    for (const alert of fixture.alerts) assert.deepEqual(await isolated.decide(alert), await local(alert));
+  }
 });
 test('reader preserves every row and projects only five safe fields', async () => {
   for (const [key, reader] of [['brute-force', readBrute], ['web-injection', readWeb]]) {

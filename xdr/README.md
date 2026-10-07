@@ -11,6 +11,8 @@ npm run xdr:test
 npm run xdr:replay
 ```
 
+제출용 decide.mjs는 npm run xdr:build로 decide-source.mjs와 patterns.json에서 생성한 단일 ES 모듈이다. 저장소의 다른 파일·Node 전용 모듈을 import하지 않아 파일 하나만 전달되는 격리 환경에서도 실행된다. 시험은 data: URL로 모듈을 독립 실행하고 모든 원본 경보의 결과가 로컬 실행과 일치하는지 확인한다. 실제 Jev를 연결할 호스트는 사용하는 decide.mjs의 setJevReviewer를 호출해야 하며, 설정하지 않으면 알림 fallback이다.
+
 각 result.json은 공식 aleph.xdr.result.v1 계약을 따른다. 실행기는 실제 decide(alert)를 다시 호출하므로 저장된 결과를 정답으로 읽지 않는다. 경보 ID·계정·주소·정답 순서를 기준으로 행동을 하드코딩하지 않는다. read-alerts.mjs는 경보 수만큼 시각·출발 주소·가명 계정·수준·비밀값을 지운 설명의 다섯 필드를 반환한다. 알림 로그에는 설명 원문·계정·키·URL을 쓰지 않는다.
 
 ## 판단
