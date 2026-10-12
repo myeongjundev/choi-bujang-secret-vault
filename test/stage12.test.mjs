@@ -2,12 +2,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { collectOperationsStatus } from '../src/operations-status.mjs';
 import { readFile } from 'node:fs/promises';
+import { runAttackChecks } from '../src/attack-check.mjs';
 const config = { publicAppUrl: 'https://fixture.local' };
 const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
 
 test('dashboard counters come from actual calls; fake matrix status never becomes execution evidence', async () => {
   const urls = [];
-  const fetchImpl = async (url, options) => { urls.push(url.pathname); assert.ok(options.alephEvidence.requestId);
+  const fetchImpl = async (url, options) => { urls.push(url.pathname); assert.ok(options.alephEvidence.caseId);
+    assert.match(options.alephEvidence.requestKey, /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/u);
+    assert.deepEqual(Object.keys(options.alephEvidence).sort(), ['caseId', 'requestKey']);
     if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 });
     return new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }); };
   const out = await collectOperationsStatus(config, matrix, { fetchImpl });
@@ -50,4 +53,32 @@ test('dashboard renders server observations and clears prior successes if a new 
   assert.equal(elements.get('checks').children.length, 0); assert.equal(elements.get('matrix').children.length, 0);
   assert.equal(elements.get('counts').textContent, '미확인');
   assert.ok(elements.get('status').textContent.includes('통과로 표시하지 않습니다'));
+});
+
+test('bundle HTTP observations correlate with their real case IDs without transmitting evidence in headers or URLs', async () => {
+  const originalFetch = globalThis.fetch, calls = [];
+  const configuration = { step: 12, publicAppUrl: 'https://fixture.local', sampleMarker: 'absent-fixture-marker',
+    originalApiUrl: 'https://fixture.supabase.co/rest/v1/user_notes' };
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    assert.deepEqual(Object.keys(options.alephEvidence).sort(), ['caseId', 'requestKey']);
+    assert.match(options.alephEvidence.requestKey, /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/u);
+    assert.ok(!JSON.stringify(options.headers).includes(options.alephEvidence.requestKey));
+    assert.ok(!url.href.includes(options.alephEvidence.requestKey));
+    if (url.pathname === '/api/auth-config') return Response.json({ url: 'https://fixture.supabase.co', publishableKey: 'public-fixture' });
+    if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
+    if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
+    if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 11, failed: 0, notRun: 3, officialEngineNotRun: 41 } });
+    const status = url.pathname === '/data.json' ? 404 : url.pathname.startsWith('/api/') || url.pathname.startsWith('/rest/') ? 401 : 200;
+    return new Response('{}', { status });
+  };
+  try {
+    const attempts = await runAttackChecks(configuration);
+    assert.equal(attempts.length, 20);
+    assert.ok(attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed'));
+    for (const row of attempts.filter(row => !row.attackId.startsWith('local_'))) {
+      assert.equal(calls.filter(call => call.options.alephEvidence.caseId === row.attackId).length, 1);
+    }
+    assert.equal(new Set(calls.map(call => call.options.alephEvidence.requestKey)).size, calls.length);
+  } finally { globalThis.fetch = originalFetch; }
 });

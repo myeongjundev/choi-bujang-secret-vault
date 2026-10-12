@@ -18,7 +18,7 @@ export async function collectOperationsStatus(config, matrix, { fetchImpl = fetc
     const requestId = randomUUID();
     try {
       const response = await fetchImpl(new URL(path, app), { method, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000),
-        alephEvidence: { case: id, requestId } });
+        alephEvidence: { caseId: id, requestKey: requestId } });
       let passed = response.status === expected;
       if (id === 'backup_preview') {
         const value = await response.json();

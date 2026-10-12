@@ -104,6 +104,8 @@ backups/safe-policy.json은 커밋으로 고정한 공개 가능한 경로 정�
 
 실제 승인 사용자 조회·타인 메모 거부·회수 후 재조회는 공식 연결/시험 세션이 없어 미실행이며 요청 ID·시각은 null입니다. data/attack-matrix.json에는 도감의 41종 시험 이름과 기대 조건을 적었지만 실행 기록을 만들지 않았습니다. 이 계획 파일의 passed 값을 입력해도 API는 성공 근거로 받지 않습니다. 게임 심판의 기존 승인 기록을 현재 운영 엔진의 41종 재현 완료로 확대하지 않습니다. 회수 수치는 미연결/null이고, 탐지 제안은 local_fixture로 표시합니다. 복구 버전은 실제 사본 검증 API에서 읽으며 운영 정책 쓰기는 없습니다.
 
+첫 두 심판 접수는 UNV_RUN_ENVIRONMENT로 확인불가였습니다. [운영 측 공개 점검 표본](https://github.com/ChoiTimo/byteback-sample-pass/blob/main/src/attack-check.mjs)과 대조해 자기 점검/작전실 HTTP 요청의 관측 메타데이터를 alephEvidence의 caseId/requestKey로 맞췄습니다. 사례 ID는 반환한 실제 점검 ID에 연결하고 요청 키는 새 UUID로 생성합니다. 이 메타데이터를 HTTP 헤더·URL에 보내거나 신원/승인 근거로 사용하지 않습니다. 제출 묶음의 기존 attackId/expected/observed 3필드 계약은 유지합니다. 환경 오류의 원인을 이 차이라고 확정하지 않았습니다. 보완 뒤 회귀40개 통과, 실제 재제출 결과는 별도 확인합니다.
+
 ### 검사한 커밋에서 재현하기
 
 학생이 만든 부분은 src/decider.mjs, src/detect.mjs, public 접속/작전실 화면, api 자료실/사본 검증/복원, SQL 보관·복원 절차, 자기 점검 코드입니다. 제공 엔진은 ALEPH SDP engine이며 기기 등록·키 보관·로그인과 기기 결합·요청 서명 확인·판정 집행·감사 보관을 맡습니다. 이 저장소에는 제공 엔진의 키·바이너리·설치 명령을 포장하지 않습니다.
