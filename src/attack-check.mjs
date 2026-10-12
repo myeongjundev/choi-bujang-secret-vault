@@ -1,7 +1,7 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if ([3, 4, 5, 6].includes(config.step)) {
+  if (Number.isInteger(config.step) && config.step >= 3 && config.step <= 12) {
     const request = (path, method = 'GET', authorization) => fetch(new URL(path, config.publicAppUrl), {
       method, redirect: 'error', signal: AbortSignal.timeout(10000),
       headers: authorization ? { Authorization: authorization } : {},
@@ -40,7 +40,7 @@ export async function runAttackChecks(config) {
           expected: '서버 키·시드 표식 없음', observed: `HTTP ${publicResponse.status}; leak marker: ${leak}` });
       }
     }
-    if (config.step === 6) {
+    if (config.step >= 6) {
       const { decide } = await import('./decider.mjs');
       const { fixtureRequests } = await import('../scripts/fixture-7.mjs');
       for (const [attackId, patch, expected] of [
@@ -53,6 +53,15 @@ export async function runAttackChecks(config) {
         const out = await decide({ ...normal, ...patch });
         results.push({ attackId, expected: `local fixture ${expected}; 운영 기기 연결 증거 아님`,
           observed: `local fixture ${out.decision}; ${out.reasonCode}` });
+      }
+      if (config.step >= 7) {
+        for (const verified of [false, true]) {
+          const { suspicious } = fixtureRequests();
+          const out = await decide({ ...suspicious, stepUp: { verified, authAgeSeconds: verified ? 60 : null } });
+          results.push({ attackId: verified ? 'local_step_up_verified' : 'local_compound_risk',
+            expected: `local fixture ${verified ? 'allow' : 'step_up'}; 운영 재인증 증거 아님`,
+            observed: `local fixture ${out.decision}; ${out.reasonCode}` });
+        }
       }
     }
     return results;

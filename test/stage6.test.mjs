@@ -44,7 +44,7 @@ test('stage 6 deployment metadata preserves identity and rejects invalid stage v
   const env = { VERCEL_GIT_PROVIDER: 'github', VERCEL_GIT_REPO_OWNER: 'Student-A',
     VERCEL_GIT_REPO_SLUG: 'aleph-defense', VERCEL_GIT_COMMIT_SHA: 'a'.repeat(40), VERCEL_URL: 'student-defense.vercel.app' };
   const out = deploymentIdentity(env, config);
-  assert.equal(out.step, 6); assert.equal(out.judgeIssuer, config.judgeIssuer);
+  assert.equal(out.step, config.step); assert.equal(out.judgeIssuer, config.judgeIssuer);
   assert.deepEqual(out.identityProvider, config.identityProvider);
   assert.deepEqual(out.allowedRoutes, config.allowedRoutes); assert.ok(!Object.hasOwn(out, 'sampleMarker'));
   for (const step of [0, 13, '6', 6.5]) assert.throws(() => deploymentIdentity(env, { ...config, step }));

@@ -1,4 +1,4 @@
-# BYTE BACK 자료실 · 6단계 저장점
+# BYTE BACK 자료실 · 7단계 저장점
 
 1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
 
@@ -6,6 +6,8 @@
 
 배포: https://choi-bujang-secret-vault-sigma.vercel.app
 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
+
+7단계는 출처가 명확한 가상 복합 이상 신호에 step_up을 반환합니다. 지역 하나만으로 영구 차단하지 않습니다. 엔진 계약의 verified 재인증이 신선하면 요청을 다시 허용합니다. 클라이언트 출처·누락·중첩 추가 필드는 거부하고 none 신호에는 위치를 채우지 않습니다. 로컬 판정 연습 4건, fixture:7, 기존 기능 포함 시험 20개와 빌드가 통과했습니다. 운영 재로그인·자료 차단 연결은 반별 엔진 미제공으로 미검증입니다. 실제 심판 결과는 제출 후 기록합니다.
 
 Supabase Auth 공식 SDK의 signInWithPassword/signOut을 사용합니다. 비밀번호·토큰은 출력하거나 Git에 저장하지 않습니다. 브라우저 세션은 메모리에만 보관하며 새로고침하면 다시 로그인합니다. 서버는 원본 src/verify-login.mjs로 신원·서명·만료·발급자·대상을 검사합니다. judgeIssuer는 시작 틀의 운영 발급자를 보존했습니다.
 
