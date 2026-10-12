@@ -1,6 +1,8 @@
-# BYTE BACK 자료실 · 5단계 저장점
+# BYTE BACK 자료실 · 6단계 저장점
 
 1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
+
+6단계 기기 등록 판정 규칙을 구현했습니다. 로컬 판정기 연습 2건, 기존 자료실·XDR 포함 시험 17개 및 빌드는 통과했습니다. 6단계 운영 심판 결과는 제출 후 별도로 확인합니다.
 
 배포: https://choi-bujang-secret-vault-sigma.vercel.app
 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
@@ -37,6 +39,19 @@ A/B 초기 자료 소유자 연결은 실제 계정 준비 뒤 별도로 검토�
 
 ## XDR 보너스 학습 모듈
 
-무차별 로그인 및 웹 주입 모듈은 xdr/README.md에 실행·패턴·만료 규칙을 기록했습니다. 공식 가상 Wazuh 경보만 사용하며 기존 자료실 API·로그인·src/decider.mjs의 기본 규칙은 변경하지 않습니다. 이 판정기는 현재 starter.deny만 읽어 기본 거부하며 운영 반 엔진에 연결하지 않았습니다. 추가 XDR deny overlay는 별도 모듈이며 확인된 릴레이 출발 주소가 있는 호스트에서만 사용할 수 있습니다.
+무차별 로그인 및 웹 주입 모듈은 xdr/README.md에 실행·패턴·만료 규칙을 기록했습니다. 2026-10-07 운영 심판에서 두 과제 모두 통과했고 보너스 합산 180/600점을 확인했습니다. 6단계는 XDR 모듈·기존 자료실 API·로그인을 보존하고 별도 src/decider.mjs만 갱신합니다. 추가 XDR deny overlay는 별도 모듈이며 확인된 릴레이 출발 주소가 있는 호스트에서만 사용할 수 있습니다.
 
-npm run xdr:run -- brute-force 및 npm run xdr:run -- web-injection 으로 result.json을 다시 생성합니다. 모호한 경보의 실제 Jev 연결 정보가 없으므로 현재는 unavailable 알림 fallback이며, Jev 응답을 받았다고 기록하지 않습니다. npm run xdr:replay는 허용하는 시험용 기본 정책을 사용한 연결 모의 시험이고 운영 접속 판정이 아닙니다. 보너스 운영 판정은 제출 후 별도로 확인합니다.
+npm run xdr:build 후 npm run xdr:run -- brute-force 및 npm run xdr:run -- web-injection 으로 result.json을 다시 생성합니다. 모호한 경보의 실제 Jev 연결 정보가 없으므로 현재는 unavailable 알림 fallback이며, Jev 응답을 받았다고 기록하지 않습니다. npm run xdr:replay는 허용하는 시험용 기본 정책을 사용한 연결 모의 시험이고 운영 접속 판정이 아닙니다.
+
+## 6단계 기기 등록 정책과 운영 연결 범위
+
+aleph.config.json의 allowedRoutes에 notes 서비스의 GET /api/notes, GET /api/notes/:id, GET /notes/:id를 명시했습니다. 마지막 경로는 공식 엔진 요청 연습의 경로입니다. 서비스·method·pathPattern만 담고 비밀값은 없습니다. 공개 배포 식별기의 단계 범위는 기존 제출 계약에 맞춰 1~12를 지원합니다.
+
+src/decider.mjs는 공식 aleph.decision.v1 18필드 입력을 검사하고 deviceRegistered === true일 때만 해당 자료실 읽기를 허용합니다. 미등록·확인 불가 입력은 device_not_registered, 미허용 서비스·쓰기·route/path 불일치는 route_not_allowed로 거부합니다. 응답은 공식 5필드이며 RULE_IDS에는 device_registered와 route_not_allowed만 있습니다. 제출 파일은 외부 import 없이 독립 실행됩니다.
+
+엔진이 로그인·기기 인증서·주체 결합을 먼저 검증한다는 계약에 의존합니다. subjectId를 Supabase 사용자 ID와 비교하거나 브라우저의 userId/role/device를 신뢰하지 않습니다. 학생 판정기는 인증서를 검증하는 엔진이나 공개 HTTP 판정 endpoint가 아닙니다.
+
+반별 접속 도구 설치 명령·등록부·릴레이 연결 안내는 제공받지 않았습니다. 설치 명령·CA·인증서·서명 키를 만들지 않았으며, 실제 mTLS 접속·다른 사용자 토큰과 기기 조합 시험은 미실행입니다. 현재 자료실 API는 기존 로그인·소유권 검사를 유지하고 운영 엔진 경로로만 응답하도록 전환하지 않았습니다. 연결 자료가 제공되면 정상 사용자 접속을 먼저 확인한 뒤 운영 통로 제한을 적용해야 합니다. 현재 점검 결과를 실제 기기 승인·접속 회수로 보고하지 않습니다.
+
+실행: npm run decider:test; node --test test/*.test.mjs; npm run build -- --local.
+커밋 후 npm run bundle은 실제 비로그인 HTTP 점검과 구분된 local fixture 판정만 기록합니다. bundle-notes.json·artifacts/submission.json 및 비밀 설정은 커밋하지 않습니다.

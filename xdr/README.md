@@ -27,11 +27,11 @@ scripts/xdr-run.mjs는 block 후보만 xdr/deny-rules.json에 기록하며 alert
 
 xdr/ztna-overlay.mjs의 withXdr(baseDecide, rules)는 유효한 거부 후보가 일치할 때만 거부하고, 나머지는 기존 baseDecide에 그대로 위임한다. 확인되지 않은 sourceIp는 차단 근거로 사용하지 않는다. 브라우저가 제출한 IP나 X-Forwarded-For를 신뢰하는 연결은 만들지 않았다.
 
-현재 docs/DECIDER_REQUEST.md의 18개 요청 필드에는 확인된 원본 IP가 없고 signals.source도 실경로에서는 none이다. 따라서 운영 엔진의 출발 주소 공급 계약과 xdr_blocked 이유 코드 등록 전에는 실제 ZTNA 경로에 연결됐다고 말하지 않는다. src/decider.mjs와 RULE_IDS는 보존했다. 모듈 시험의 정상 통과는 허용하는 시험용 기본 정책에 대한 결과이며 현재 starter.deny의 운영 허용을 뜻하지 않는다.
+현재 docs/DECIDER_REQUEST.md의 18개 요청 필드에는 확인된 원본 IP가 없고 signals.source도 실경로에서는 none이다. 따라서 운영 엔진의 출발 주소 공급 계약과 xdr_blocked 이유 코드 등록 전에는 실제 ZTNA 경로에 연결됐다고 말하지 않는다. 6단계에서 src/decider.mjs에 기기 등록·자료실 읽기 정책을 추가했지만 XDR overlay는 아직 운영 경로에 연결하지 않았다. 모듈 시험의 정상 통과는 허용하는 시험용 기본 정책에 대한 결과이며 실제 기기 연결이나 운영 사용자 허용 증거가 아니다.
 
 ## 관찰한 로컬 결과
 
 - brute-force: block 10, alert 9, record 9.
 - web-injection: block 8, alert 9, record 9.
 - 모의 overlay: 공격 18건 거부, 정상 거부 0, 애매한 경보 거부 0, 모든 관련 규칙 만료 후 거부 0.
-- XDR 회귀시험 5개와 기존 자료실 시험 7개 통과. 운영 심판 결과는 별도로 확인한다.
+- XDR 회귀시험은 독립 실행을 포함해 6개이며 통과했다. 2026-10-07 두 보너스 운영 심판 성공 및 합산 180/600점을 확인했다. 6단계 변경 뒤 기존 자료실·XDR·기기 정책 시험 총 17개가 통과했다.

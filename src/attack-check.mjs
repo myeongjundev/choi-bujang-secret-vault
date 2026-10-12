@@ -1,7 +1,7 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 export async function runAttackChecks(config) {
-  if ([3, 4, 5].includes(config.step)) {
+  if ([3, 4, 5, 6].includes(config.step)) {
     const request = (path, method = 'GET', authorization) => fetch(new URL(path, config.publicAppUrl), {
       method, redirect: 'error', signal: AbortSignal.timeout(10000),
       headers: authorization ? { Authorization: authorization } : {},
@@ -17,7 +17,7 @@ export async function runAttackChecks(config) {
       results.push({ attackId: id, expected: id === 'static_seed' ? '404' : '401; 자료 없음', observed: `HTTP ${response.status}` });
       await response.text();
     }
-    if (config.step === 5) {
+    if (config.step >= 5) {
       const authResponse = await request('/api/auth-config');
       if (!authResponse.ok) throw new Error('공개 로그인 설정을 확인할 수 없습니다.');
       const { url, publishableKey } = await authResponse.json();
@@ -38,6 +38,21 @@ export async function runAttackChecks(config) {
           || body.includes(config.sampleMarker);
         results.push({ attackId: `public_asset_${path === '/' ? 'index' : path === '/app.js' ? 'app' : 'identity'}`,
           expected: '서버 키·시드 표식 없음', observed: `HTTP ${publicResponse.status}; leak marker: ${leak}` });
+      }
+    }
+    if (config.step === 6) {
+      const { decide } = await import('./decider.mjs');
+      const { fixtureRequests } = await import('../scripts/fixture-7.mjs');
+      for (const [attackId, patch, expected] of [
+        ['local_registered_device', {}, 'allow'],
+        ['local_unregistered_device', { deviceRegistered: false }, 'deny'],
+        ['local_forged_device_flag', { deviceRegistered: 'true' }, 'deny'],
+        ['local_wrong_service', { service: 'unlisted' }, 'deny'],
+      ]) {
+        const { normal } = fixtureRequests();
+        const out = await decide({ ...normal, ...patch });
+        results.push({ attackId, expected: `local fixture ${expected}; 운영 기기 연결 증거 아님`,
+          observed: `local fixture ${out.decision}; ${out.reasonCode}` });
       }
     }
     return results;
