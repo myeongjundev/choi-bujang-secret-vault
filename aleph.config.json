@@ -1,5 +1,5 @@
 {
-  "step": 7,
+  "step": 8,
   "repoUrl": "https://github.com/myeongjundev/choi-bujang-secret-vault",
   "publicAppUrl": "https://choi-bujang-secret-vault-sigma.vercel.app",
   "sampleMarker": "SAMPLE_NOTE_1",
@@ -12,7 +12,10 @@
   "allowedRoutes": [
     { "service": "notes", "method": "GET", "pathPattern": "/api/notes" },
     { "service": "notes", "method": "GET", "pathPattern": "/api/notes/:id" },
-    { "service": "notes", "method": "GET", "pathPattern": "/notes/:id" }
+    { "service": "notes", "method": "GET", "pathPattern": "/notes/:id" },
+    { "service": "notes", "method": "POST", "pathPattern": "/api/notes" },
+    { "service": "notes", "method": "PUT", "pathPattern": "/api/notes/:id" },
+    { "service": "notes", "method": "DELETE", "pathPattern": "/api/notes/:id" }
   ],
   "originalApiUrl": "https://cenxyqdoulktaqtkskeh.supabase.co/rest/v1/user_notes",
   "restoreRoute": null

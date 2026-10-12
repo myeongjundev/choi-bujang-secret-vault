@@ -1,4 +1,4 @@
-# BYTE BACK 자료실 · 7단계 저장점
+# BYTE BACK 자료실 · 8단계 저장점
 
 1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
 
@@ -7,7 +7,7 @@
 배포: https://choi-bujang-secret-vault-sigma.vercel.app
 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
 
-7단계는 출처가 명확한 가상 복합 이상 신호에 step_up을 반환합니다. 지역 하나만으로 영구 차단하지 않습니다. 엔진 계약의 verified 재인증이 신선하면 요청을 다시 허용합니다. 클라이언트 출처·누락·중첩 추가 필드는 거부하고 none 신호에는 위치를 채우지 않습니다. 로컬 판정 연습 4건, fixture:7, 기존 기능 포함 시험 20개와 빌드가 통과했습니다. 운영 재로그인·자료 차단 연결은 반별 엔진 미제공으로 미검증입니다. 실제 심판 결과는 제출 후 기록합니다.
+7단계는 출처가 명확한 가상 복합 이상 신호에 step_up을 반환합니다. 지역 하나만으로 영구 차단하지 않습니다. 엔진 계약의 verified 재인증이 신선하면 요청을 다시 허용합니다. 클라이언트 출처·누락·중첩 추가 필드는 거부하고 none 신호에는 위치를 채우지 않습니다. 로컬 판정 연습 4건, fixture:7, 기존 기능 포함 시험 20개와 빌드가 통과했습니다. 운영 재로그인·자료 차단 연결은 반별 엔진 미제공으로 미검증입니다. 2026-10-13 실제 7단계 심판은 45c7c4da1ccb 커밋의 100/100점·조건 7개·가점 3개 통과를 확인했습니다.
 
 Supabase Auth 공식 SDK의 signInWithPassword/signOut을 사용합니다. 비밀번호·토큰은 출력하거나 Git에 저장하지 않습니다. 브라우저 세션은 메모리에만 보관하며 새로고침하면 다시 로그인합니다. 서버는 원본 src/verify-login.mjs로 신원·서명·만료·발급자·대상을 검사합니다. judgeIssuer는 시작 틀의 운영 발급자를 보존했습니다.
 
@@ -57,3 +57,7 @@ src/decider.mjs는 공식 aleph.decision.v1 18필드 입력을 검사하고 devi
 
 실행: npm run decider:test; node --test test/*.test.mjs; npm run build -- --local.
 커밋 후 npm run bundle은 실제 비로그인 HTTP 점검과 구분된 local fixture 판정만 기록합니다. bundle-notes.json·artifacts/submission.json 및 비밀 설정은 커밋하지 않습니다.
+
+## 8단계 자원 구역
+
+메모는 notes, 공지는 vault_notices라는 다른 저장소와 /api/notices/:id 경로를 사용합니다. 메모는 SQL의 owner_id 조건으로 본인에게만 CRUD를 제공합니다. 공지 PUT은 검증된 사용자와 서버 환경변수 INSTRUCTOR_USER_IDS의 UUID 목록을 비교하며 요청 role은 무시합니다. 미설정 목록은 공지 수정을 허용하지 않습니다. src/decider.mjs는 notes의 정확한 경로·메서드만 허용하며 기능 ID와 쿼리 스위치는 거부합니다. 공지 역할의 운영 엔진 계약은 없어 해당 서비스의 릴레이 허용은 미구현입니다. sql/stage8.sql은 기존 데이터 보존형 신규 가상 공지 저장소입니다. 2026-10-13 본인 Supabase SQL Editor에서 실행하고 가상 공지 1건을 확인했습니다. 심판은 제출 후 별도 기록합니다. 시험 22개와 빌드 통과.

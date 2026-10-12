@@ -64,6 +64,13 @@ export async function runAttackChecks(config) {
         }
       }
     }
+    if (config.step >= 8) {
+      for (const method of ['GET', 'PUT']) {
+        const response = await request('/api/notices/00000000-0000-4000-8000-000000000008', method);
+        await response.text();
+        results.push({ attackId: `anonymous_notice_${method.toLowerCase()}`, expected: '401; 공지 본문 없음', observed: `HTTP ${response.status}` });
+      }
+    }
     return results;
   }
   if (config.step === 2) {

@@ -1,11 +1,14 @@
 // Called only after the official engine verifies identity/device binding.
 // This pure policy is not a public HTTP endpoint or an mTLS verifier.
-export const RULE_IDS = Object.freeze(['device_registered', 'route_not_allowed', 'step_up_required']);
+export const RULE_IDS = Object.freeze(['device_registered', 'route_not_allowed', 'step_up_required', 'resource_zones']);
 const REQUEST_KEYS = 'at,classId,deviceId,deviceRegistered,method,path,policyRevision,projectId,queryLength,querySha256,recentEvents,requestId,route,schema,service,signals,stepUp,subjectId';
 const READ_PATHS = Object.freeze({
   'GET /api/notes': /^\/api\/notes$/u,
   'GET /api/notes/:id': /^\/api\/notes\/(?!\.{1,2}$)[^/?#%\\\x00-\x1f]+$/u,
   'GET /notes/:id': /^\/notes\/(?!\.{1,2}$)[^/?#%\\\x00-\x1f]+$/u,
+  'POST /api/notes': /^\/api\/notes$/u,
+  'PUT /api/notes/:id': /^\/api\/notes\/[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/iu,
+  'DELETE /api/notes/:id': /^\/api\/notes\/[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/iu,
 });
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const nonempty = value => typeof value === 'string' && value.trim().length > 0;
@@ -43,9 +46,12 @@ export async function decide(request) {
   if (!validRequest(request) || request.deviceRegistered !== true) {
     return respond(request, 'deny', 'device_not_registered', 'device_registered');
   }
-  if (request.service !== 'notes' || request.method !== 'GET'
+  if (request.service !== 'notes' || !request.route.startsWith(`${request.method} `)
       || !Object.hasOwn(READ_PATHS, request.route) || !READ_PATHS[request.route].test(request.path)) {
     return respond(request, 'deny', 'route_not_allowed', 'route_not_allowed');
+  }
+  if (['export', 'backup', 'restore', 'admin', 'all', 'upload'].includes(request.path.split('/').at(-1)) || request.queryLength !== 0) {
+    return respond(request, 'deny', 'route_not_allowed', 'resource_zones');
   }
   // These synthetic signals are practice/judge data, not verified real-world location.
   // No client-supplied location headers are promoted into engine signals.
@@ -59,5 +65,7 @@ export async function decide(request) {
       return respond(request, 'step_up', 'step_up_required', 'step_up_required');
     }
   }
-  return respond(request, 'allow', 'approved', 'device_registered');
+  // The policy scopes routes; the final notes API compares the verified user
+  // with the stored owner in every query. subjectId is not a Supabase UUID.
+  return respond(request, 'allow', 'approved', 'resource_zones');
 }
