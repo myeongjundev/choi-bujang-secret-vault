@@ -1,7 +1,14 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
 import { runBundleChecks } from './bundle-checks.mjs';
-export async function runAttackChecks(config, options) {
+import { readFileSync } from 'node:fs';
+export async function runAttackChecks(input, options) {
+  // R5 bundle callers pass config; the current public example passes the URL.
+  // Read only the public repository configuration, never an env file or key.
+  const config = typeof input === 'string'
+    ? { ...JSON.parse(readFileSync(new URL('../aleph.config.json', import.meta.url), 'utf8')), publicAppUrl: input }
+    : input;
+  if (!config || typeof config !== 'object' || Array.isArray(config)) throw new Error('invalid_check_configuration');
   if (Number.isInteger(config.step) && config.step >= 3 && config.step <= 12) return runBundleChecks(config, options);
   if (config.step === 2) {
     const app = new URL(config.publicAppUrl);

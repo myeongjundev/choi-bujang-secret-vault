@@ -124,3 +124,14 @@ test('malformed observation JSON is unavailable evidence, while unsafe original 
   await assert.rejects(runAttackChecks({ ...bundleFixture, originalApiUrl: 'https://other.supabase.co/rest/v1/user_notes' },
     { fetchImpl: async url => fixtureResponse(url) }), /invalid_original_api_origin/u);
 });
+
+test('R5 config input and public-example URL input execute identical observations', async () => {
+  const repositoryConfig = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url), 'utf8'));
+  const options = { fetchImpl: async url => url.pathname === '/api/auth-config'
+    ? Response.json({ url: new URL(repositoryConfig.originalApiUrl).origin, publishableKey: 'public-fixture' })
+    : fixtureResponse(url) };
+  const fromConfig = await runAttackChecks(repositoryConfig, options);
+  const fromUrl = await runAttackChecks(repositoryConfig.publicAppUrl, options);
+  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 20);
+  await assert.rejects(runAttackChecks('http://fixture.local', options), /invalid_observation_origin/u);
+});
