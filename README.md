@@ -73,3 +73,7 @@ docs/DETECT_EVENTS.md의 제공 연습 계약만 사용합니다. 같은 가명 
 backups/safe-policy.json은 커밋으로 고정한 공개 가능한 경로 정책 사본입니다. src/policy-recovery.mjs는 고정 SHA-256·프로젝트·버전을 확인하고 planPolicyRestore로 notes의 전/후 차이와 확인값을 반환합니다. applyPolicyRestore는 동일 차이의 확인값이 있어야 시험 정책만 새 판 번호로 적용하고 다른 서비스·감사 이력을 보존합니다. 운영 엔진 정책 쓰기는 미연결입니다. 복구 API는 현재 notes 정책이 사전 사본과 다르면 정책 복구가 필요하다고 거부합니다.
 
 초기화: 본인 Supabase SQL Editor에서 sql/stage10.sql. DB 시험: sql/stage10-check.sql은 새 가상 B 메모만 생성해 변조/삭제 복원과 타인 거부를 확인하고 전체 트랜잭션을 ROLLBACK합니다. 기존 DB 메모를 시험 때문에 지우지 않습니다. 복구 뒤 npm run decider:test → npm run fixture:7 → npm run detect:test → node --test test/*.test.mjs → npm run build -- --local → 커밋 후 npm run bundle 순서로 정상 읽기, 소유자 A/B, 무인증/위조 토큰, 미등록 기기, 복합 이상, 구역 밖·공지 쓰기, 탐지 경계, 복구 오류를 재검증합니다. 실제 mTLS·운영 재인증·회수 집행은 미실행입니다.
+
+### 복구 전 사본 재읽기와 검증
+
+10단계 첫 심판 48점(S10_BACKUP_UNVERIFIED)을 근거로 재검토했습니다. 모듈 초기화 때 읽은 캐시를 사용하지 않고 모든 복구 직전에 사전 정책 파일을 다시 읽습니다. 사본이 없거나 검증 실패면 중단하며 복구 RPC를 호출하지 않습니다. GET /api/recovery-plan은 실제 사본을 다시 읽어 고정 SHA-256·프로젝트·정책 버전 검증을 하고 복원 버전 1, notes 변경 전/후 항목, 확인값을 보여 줍니다. 검증 실패 응답은 409·backupVerified false이며 운영 정책 쓰기는 없습니다. 실행 전에 이 결과의 버전과 변경 범위를 확인한 뒤 해당 사용자 인증으로 POST /api/restore/:noteId를 호출합니다. 이후 동일 사본을 복구 API에서 다시 검증하고 사전 DB 사본의 ID·소유자·내용 해시를 확인합니다. 새 회귀 시험 포함 29개와 빌드 통과. 실제 심판 결과는 재제출 후 기록합니다.

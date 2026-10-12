@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { createLoginVerifier } from './verify-login.mjs';
 import { verifyPolicyBackup } from './policy-recovery.mjs';
 const config = JSON.parse(readFileSync(new URL('../aleph.config.json', import.meta.url), 'utf8'));
-const backup = JSON.parse(readFileSync(new URL('../backups/safe-policy.json', import.meta.url), 'utf8'));
+export const readPolicyBackup = () => JSON.parse(readFileSync(new URL('../backups/safe-policy.json', import.meta.url), 'utf8'));
 const UUID = /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/iu;
 export function createRestoreHandler({ env = process.env, clientFactory = createClient,
-  verifierFactory = createLoginVerifier, policy = config, policyBackup = backup } = {}) {
+  verifierFactory = createLoginVerifier, policy = config, policyBackup, backupLoader = readPolicyBackup } = {}) {
   let verify, db;
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -24,7 +24,9 @@ export function createRestoreHandler({ env = process.env, clientFactory = create
         (typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).length !== 0)) {
         return res.status(400).json({ error: 'restore_body_not_allowed' });
       }
-      const safe = verifyPolicyBackup(policyBackup, policy.repoUrl);
+      // Reread and validate the prior copy immediately before any restore RPC.
+      // A missing/corrupt copy aborts without invoking storage mutation.
+      const safe = verifyPolicyBackup(policyBackup ?? backupLoader(), policy.repoUrl);
       if (JSON.stringify(policy.allowedRoutes.filter(route => route.service === 'notes')) !== JSON.stringify(safe.allowedRoutes)) {
         return res.status(503).json({ error: 'policy_restore_required' });
       }

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { planPolicyRestore, applyPolicyRestore } from '../src/policy-recovery.mjs';
 import { createRestoreHandler } from '../src/restore-api.mjs';
+import { createRecoveryPlanHandler } from '../src/recovery-plan.mjs';
 const backup = JSON.parse(await readFile(new URL('../backups/safe-policy.json', import.meta.url), 'utf8'));
 const policy = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url), 'utf8'));
 
@@ -36,4 +37,28 @@ test('restore endpoint uses verified owner, rejects caller-supplied backup/owner
   assert.equal((await call('Bearer Fixture', 'GET')).code, 405);
   const result = await call('Bearer Fixture'); assert.equal(result.code, 200); assert.deepEqual(result.body, { id, restored: true, verified: true });
   broken = true; assert.equal((await call('Bearer Fixture')).code, 502);
+});
+
+test('each preview rereads the copy and reports version/scope; bad or missing backup is never verified', async () => {
+  let reads = 0, broken = false;
+  const handler = createRecoveryPlanHandler({ configLoader: () => policy, backupLoader: () => {
+    reads++; if (broken) throw new Error('missing'); return structuredClone(backup);
+  } });
+  const call = async () => { const res = { setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
+    await handler({ method: 'GET' }, res); return res; };
+  const first = await call(); assert.equal(first.code, 200); assert.equal(first.body.backupVerified, true);
+  assert.equal(first.body.backupRevision, 1); assert.equal(first.body.scope, 'notes'); assert.equal(first.body.operationalPolicyWrite, false);
+  broken = true; const second = await call(); assert.equal(second.code, 409); assert.equal(second.body.backupVerified, false); assert.equal(reads, 2);
+});
+
+test('missing or altered backup stops the restore before any RPC', async () => {
+  let calls = 0;
+  for (const backupLoader of [() => { throw new Error('missing'); }, () => ({ ...backup, policyRevision: 2 })]) {
+    const handler = createRestoreHandler({ policy, backupLoader, env: { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'unit-test-only' },
+      verifierFactory: () => async () => ({ userId: randomUUID() }), clientFactory: () => ({ async rpc() { calls++; } }) });
+    const res = { setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
+    await handler({ method: 'POST', query: { noteId: randomUUID() }, headers: { authorization: 'Bearer Fixture' } }, res);
+    assert.equal(res.code, 503);
+  }
+  assert.equal(calls, 0);
 });

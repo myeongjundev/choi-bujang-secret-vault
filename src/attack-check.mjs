@@ -93,7 +93,7 @@ export async function runAttackChecks(config) {
     if (config.step >= 10) {
       // Keep the bundle's 20-check maximum. Earlier local registration checks
       // remain in the regression suite; replace two redundant bundle rows.
-      for (const id of ['local_forged_device_flag', 'local_wrong_service']) {
+      for (const id of ['local_forged_device_flag', 'local_wrong_service', 'local_registered_device']) {
         const index = results.findIndex(result => result.attackId === id);
         if (index >= 0) results.splice(index, 1);
       }
@@ -102,6 +102,10 @@ export async function runAttackChecks(config) {
         await response.text();
         results.push({ attackId, expected: '401; 복원 실행 없음', observed: `HTTP ${response.status}` });
       }
+      const response = await request('/api/recovery-plan');
+      const data = await response.json();
+      results.push({ attackId: 'backup_verification', expected: 'HTTP 200; backupVerified true; scope notes; 정책 쓰기 없음',
+        observed: `HTTP ${response.status}; backupVerified=${data.backupVerified === true}; scope=${data.scope ?? 'none'}` });
     }
     return results;
   }
