@@ -26,12 +26,12 @@
     <p><a href="/connect.html">내 기기 승인 상태 확인</a></p>
     <h1>내 자료실</h1>
     <p>실습용 가상 메모만 사용하세요. 로그인해야 자료를 읽고 쓸 수 있습니다.</p>
-    <form id="login">
+    <form id="login" hidden>
       <label>이메일 <input id="email" type="email" autocomplete="username" required></label>
       <label>비밀번호 <input id="password" type="password" autocomplete="current-password" required></label>
       <button type="submit">로그인</button>
     </form>
-    <p id="status" role="status">로그인 설정을 확인하는 중입니다.</p>
+    <p id="status" role="status">기기 승인 상태를 확인하는 중입니다. 승인 전에는 자료를 요청하지 않습니다.</p>
     <button id="logout" hidden>로그아웃</button>
     <section id="workspace" hidden>
       <form id="editor">

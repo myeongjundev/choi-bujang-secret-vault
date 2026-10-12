@@ -1,12 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { createLoginVerifier } from './verify-login.mjs';
+import { requireApprovedRequest, verifyApprovedRequest } from './protected-access.mjs';
 import { verifyPolicyBackup } from './policy-recovery.mjs';
 const config = JSON.parse(readFileSync(new URL('../aleph.config.json', import.meta.url), 'utf8'));
 export const readPolicyBackup = () => JSON.parse(readFileSync(new URL('../backups/safe-policy.json', import.meta.url), 'utf8'));
 const UUID = /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/iu;
 export function createRestoreHandler({ env = process.env, clientFactory = createClient,
-  verifierFactory = createLoginVerifier, policy = config, policyBackup, backupLoader = readPolicyBackup } = {}) {
+  verifierFactory = createLoginVerifier, policy = config, policyBackup, backupLoader = readPolicyBackup,
+  approvalVerifier = verifyApprovedRequest } = {}) {
   let verify, db;
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -17,6 +19,7 @@ export function createRestoreHandler({ env = process.env, clientFactory = create
       verify ??= verifierFactory({ config: policy, supabaseSecretKey: env.SUPABASE_SECRET_KEY });
       const user = await verify(auth);
       if (!user) return res.status(401).json({ error: 'invalid_authentication' });
+      if (!await requireApprovedRequest(approvalVerifier, req, user, res)) return;
       if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
       const noteId = req.query?.noteId;
       if (typeof noteId !== 'string' || !UUID.test(noteId)) return res.status(400).json({ error: 'invalid_id' });

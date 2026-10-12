@@ -2,12 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { createLoginVerifier } from './verify-login.mjs';
+import { requireApprovedRequest, verifyApprovedRequest } from './protected-access.mjs';
 
 const config = JSON.parse(readFileSync(new URL('../aleph.config.json', import.meta.url), 'utf8'));
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const fields = 'id,title,body';
 export function createNotesHandler({ item = false, env = process.env,
-  clientFactory = createClient, verifierFactory = createLoginVerifier } = {}) {
+  clientFactory = createClient, verifierFactory = createLoginVerifier,
+  approvalVerifier = verifyApprovedRequest } = {}) {
   let db, verify;
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -23,6 +25,7 @@ export function createNotesHandler({ item = false, env = process.env,
       if (!verify) verify = verifierFactory({ config, supabaseSecretKey: env.SUPABASE_SECRET_KEY });
       const user = await verify(authorization);
       if (!user) return res.status(401).json({ error: 'invalid_authentication' });
+      if (!await requireApprovedRequest(approvalVerifier, req, user, res)) return;
       const methods = item ? ['GET', 'PUT', 'DELETE'] : ['GET', 'POST'];
       if (!methods.includes(req.method)) {
         res.setHeader('Allow', methods.join(', '));

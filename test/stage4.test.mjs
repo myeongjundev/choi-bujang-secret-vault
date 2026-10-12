@@ -18,7 +18,7 @@ test('A/B can use their own CRUD; cross-owner operations and owner changes fail'
         return {data:clean(row),error:null};
       }};return q;
   }});
-  const options={env:{SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'unit-test-only'},clientFactory,
+  const options={approvalVerifier:async()=>true,env:{SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'unit-test-only'},clientFactory,
     verifierFactory:()=>async auth=>({userId:auth==='Bearer A'?a:b})};
   const list=createNotesHandler(options), item=createNotesHandler({...options,item:true});
   const call=async(identity,method,id,body)=>{

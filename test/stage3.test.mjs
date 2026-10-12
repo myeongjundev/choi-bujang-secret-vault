@@ -48,7 +48,7 @@ test('CRUD uses verified owner and supports create, read, update, delete, then 4
         }};return q;
     }};
   }
-  const opts={env,clientFactory,verifierFactory:()=>async()=>({kind:'student',userId})};
+  const opts={env,clientFactory,approvalVerifier:async()=>true,verifierFactory:()=>async()=>({kind:'student',userId})};
   const collection=createNotesHandler(opts), item=createNotesHandler({...opts,item:true});
   const call=async(handler,method,body,id)=>{const res=response();await handler({method,body,query:{id},headers:{authorization:'Bearer unit-test'}},res);return res;};
   const added=await call(collection,'POST',{title:'Test',body:'Fictional fixture',owner_id:randomUUID()});

@@ -24,7 +24,7 @@ test('policy restore requires verified backup and displayed-diff confirmation; k
 
 test('restore endpoint uses verified owner, rejects caller-supplied backup/owner and checks RPC postconditions', async () => {
   const id = randomUUID(), owner = randomUUID(); let calls = 0, broken = false;
-  const handler = createRestoreHandler({ policy, policyBackup: backup,
+  const handler = createRestoreHandler({ policy, policyBackup: backup, approvalVerifier: async () => true,
     env: { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'unit-test-only' },
     verifierFactory: () => async () => ({ userId: owner }), clientFactory: () => ({ async rpc(name, args) {
       calls++; assert.equal(name, 'vault_restore_note'); assert.deepEqual(args, { target_note_id: id, verified_owner_id: owner });
@@ -54,7 +54,7 @@ test('each preview rereads the copy and reports version/scope; bad or missing ba
 test('missing or altered backup stops the restore before any RPC', async () => {
   let calls = 0;
   for (const backupLoader of [() => { throw new Error('missing'); }, () => ({ ...backup, policyRevision: 2 })]) {
-    const handler = createRestoreHandler({ policy, backupLoader, env: { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'unit-test-only' },
+    const handler = createRestoreHandler({ policy, backupLoader, approvalVerifier: async () => true, env: { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'unit-test-only' },
       verifierFactory: () => async () => ({ userId: randomUUID() }), clientFactory: () => ({ async rpc() { calls++; } }) });
     const res = { setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
     await handler({ method: 'POST', query: { noteId: randomUUID() }, headers: { authorization: 'Bearer Fixture' } }, res);

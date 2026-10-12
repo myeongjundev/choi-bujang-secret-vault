@@ -20,7 +20,7 @@ test('notice edit requires server-owned instructor membership; caller roles neve
   const clientFactory = () => ({ from() { const q = { select() { return q; }, eq() { return q; },
     update(value) { updates++; Object.assign(row, value); return q; }, async maybeSingle() { return { data: { ...row }, error: null }; } }; return q; } });
   const handler = createNoticesHandler({ env: { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'unit-test-only', INSTRUCTOR_USER_IDS: teacher },
-    clientFactory, verifierFactory: () => async auth => ({ userId: auth === 'Bearer Teacher' ? teacher : student }) });
+    approvalVerifier: async () => true, clientFactory, verifierFactory: () => async auth => ({ userId: auth === 'Bearer Teacher' ? teacher : student }) });
   const call = async (auth, method, body) => { const res = { setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
     await handler({ method, query: { id }, headers: { authorization: auth }, body }, res); return res; };
   assert.equal((await call(undefined, 'GET')).code, 401);
