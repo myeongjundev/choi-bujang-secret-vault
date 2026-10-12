@@ -1,4 +1,4 @@
-# BYTE BACK 자료실 · 11단계 저장점
+# BYTE BACK 자료실 · 12단계 저장점
 
 1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
 
@@ -21,7 +21,7 @@ Vercel main push 후 자동 배포합니다. 공개 키를 추가한 뒤에는 R
 
 ## API 계약과 남은 약점
 
-GET /api/notes는 검증된 로그인 사용자의 메모 배열을 반환합니다. POST는 {id?,title,body}, id는 UUID이며 생략 시 서버가 생성합니다. 생성 응답은 id를 포함합니다.
+GET /api/notes는 로그인과 서버 기기/요청 승인이 모두 검증됐을 때 해당 사용자의 메모 배열을 반환합니다. 승인 어댑터 미연결은503입니다. POST는 {id?,title,body}, id는 UUID이며 생략 시 서버가 생성합니다. 생성 응답은 id를 포함합니다.
 GET/PUT/DELETE /api/notes/:id, 단일 GET은 {id,title,body}, 삭제 후 GET은 404입니다. owner_id는 토큰을 검증해 얻은 ID만 저장하며 요청의 userId·role·owner_id는 신뢰하지 않습니다.
 무토큰·위조·만료·다른 서비스 토큰은 자료 없이 401입니다. 목록과 단일 GET/PUT/DELETE 모두 검증한 userId와 owner_id를 SQL 조건으로 비교합니다. 다른 소유자 또는 없는 메모는 모두 404이며 수정·삭제로 상대 행을 바꾸지 않습니다. PUT은 title/body만 받으며 owner_id 등 추가 필드의 소유자 변경 시도는 400입니다. POST owner_id는 서버가 검증한 ID로 고정합니다. 실제 자료를 넣지 않습니다.
 
@@ -47,9 +47,9 @@ npm run xdr:build 후 npm run xdr:run -- brute-force 및 npm run xdr:run -- web-
 
 ## 6단계 기기 등록 정책과 운영 연결 범위
 
-aleph.config.json의 allowedRoutes에 notes 서비스의 GET /api/notes, GET /api/notes/:id, GET /notes/:id를 명시했습니다. 마지막 경로는 공식 엔진 요청 연습의 경로입니다. 서비스·method·pathPattern만 담고 비밀값은 없습니다. 공개 배포 식별기의 단계 범위는 기존 제출 계약에 맞춰 1~12를 지원합니다.
+6단계 당시 allowedRoutes는 notes 서비스의 GET /api/notes, GET /api/notes/:id, GET /notes/:id였습니다. 8단계 이후 모호한 목록 경로를 GET /api/my/notes로 좁혔습니다. 마지막 경로는 공식 엔진 요청 연습의 경로입니다. 서비스·method·pathPattern만 담고 비밀값은 없습니다. 공개 배포 식별기의 단계 범위는 기존 제출 계약에 맞춰 1~12를 지원합니다.
 
-src/decider.mjs는 공식 aleph.decision.v1 18필드 입력을 검사하고 deviceRegistered === true일 때만 해당 자료실 읽기를 허용합니다. 미등록·확인 불가 입력은 device_not_registered, 미허용 서비스·쓰기·route/path 불일치는 route_not_allowed로 거부합니다. 응답은 공식 5필드이며 RULE_IDS에는 device_registered와 route_not_allowed만 있습니다. 제출 파일은 외부 import 없이 독립 실행됩니다.
+src/decider.mjs는 공식 aleph.decision.v1 18필드 입력을 검사하고 deviceRegistered === true일 때만 해당 자료실 읽기를 허용합니다. 미등록·확인 불가 입력은 device_not_registered, 미허용 서비스·route/path 불일치는 route_not_allowed로 거부합니다. 8단계 이후 소유/역할 증거가 없는 쓰기는 write_not_allowed입니다. 응답은 공식 5필드이며 RULE_IDS는 device_registered, route_not_allowed, step_up_required, resource_zones, write_not_allowed입니다. 제출 파일은 외부 import 없이 독립 실행됩니다.
 
 엔진이 로그인·기기 인증서·주체 결합을 먼저 검증한다는 계약에 의존합니다. subjectId를 Supabase 사용자 ID와 비교하거나 브라우저의 userId/role/device를 신뢰하지 않습니다. 학생 판정기는 인증서를 검증하는 엔진이나 공개 HTTP 판정 endpoint가 아닙니다.
 
@@ -95,3 +95,21 @@ backups/safe-policy.json은 커밋으로 고정한 공개 가능한 경로 정�
 메모 목록·단건·쓰기, 반 공지, 복원 API는 로그인 검증 다음에 src/protected-access.mjs의 서버 전용 검증을 매 요청마다 호출합니다. 브라우저의 approved/role/deviceRegistered나 헤더·쿼리로 승인을 부여하지 않습니다. 제공 어댑터가 없으면 503(device_verification_unavailable), 승인 거부면 403이며 저장소에 접근하지 않습니다. 현재 기본 어댑터는 미연결입니다. 따라서 실제 승인 사용자의 운영 CRUD는 연결 전에는 사용할 수 없습니다. 기존 CRUD·소유권·공지 역할·복원 로직은 보존했고, 서버 승인 검증을 주입한 로컬 시험에서 정상 동작을 확인했습니다. 이 시험은 운영 기기 승인 증거가 아닙니다.
 
 실행: node --test test/*.test.mjs (36개 통과), node scripts/build-public.mjs --local. 배포 뒤 /vault.html을 직접 열어 승인 전 자료와 로그인 폼이 없는지 확인합니다. 실제 승인 정상 요청·서명 변조 검증에는 공식 어댑터 연결이 필요합니다. 심판 재제출 결과는 별도 기록합니다.
+
+11단계 실제 재판정: a4b7722385e4af9b6cb107e307201c61fb15f3b2에서 100/100점, 조건 6개·가점 3개. 이 판정과 운영 어댑터 미연결 상태는 별도로 기록합니다.
+
+## 12단계 탈환 작전실
+
+/operations.html에서 GET /api/operations-status의 새 관측 결과를 읽습니다. 7건의 제한된 실제 HTTP 점검(공개 화면200, 무인증 메모/본인목록/공지쓰기/복원401, 정적자료404, 사본 검증200)과 4건의 판정/탐지 가상 시험을 구분합니다. 각 실행에는 기대 결과·실제 응답·관측자가 생성한 요청 ID·확인 시각이 있습니다. 배포 커밋은 Vercel의 서버 배포 메타데이터에서 읽습니다. 새 관측 실패 시 이전 성공 수치와 표를 비웁니다. 메모 제목/본문·토큰·실명·기기 키를 읽거나 표시하지 않습니다.
+
+실제 승인 사용자 조회·타인 메모 거부·회수 후 재조회는 공식 연결/시험 세션이 없어 미실행이며 요청 ID·시각은 null입니다. data/attack-matrix.json에는 도감의 41종 시험 이름과 기대 조건을 적었지만 실행 기록을 만들지 않았습니다. 이 계획 파일의 passed 값을 입력해도 API는 성공 근거로 받지 않습니다. 게임 심판의 기존 승인 기록을 현재 운영 엔진의 41종 재현 완료로 확대하지 않습니다. 회수 수치는 미연결/null이고, 탐지 제안은 local_fixture로 표시합니다. 복구 버전은 실제 사본 검증 API에서 읽으며 운영 정책 쓰기는 없습니다.
+
+### 검사한 커밋에서 재현하기
+
+학생이 만든 부분은 src/decider.mjs, src/detect.mjs, public 접속/작전실 화면, api 자료실/사본 검증/복원, SQL 보관·복원 절차, 자기 점검 코드입니다. 제공 엔진은 ALEPH SDP engine이며 기기 등록·키 보관·로그인과 기기 결합·요청 서명 확인·판정 집행·감사 보관을 맡습니다. 이 저장소에는 제공 엔진의 키·바이너리·설치 명령을 포장하지 않습니다.
+
+1. 설치: 이 공개 저장소를 clone하고 확인할 심판 커밋으로 git checkout한 뒤 npm ci를 실행합니다(Node.js22 이상). 기존 프로젝트의 서버 비밀 설정은 공식 Vercel 설정 화면에 유지하며 Git에 넣지 않습니다. 새 DB라면 해당 단계의 sql 안내를 읽고 학습 전용 프로젝트에만 적용합니다. 현재 DB는 다시 초기화할 필요가 없습니다.
+2. 실행: node --test test/*.test.mjs, npm run decider:test, npm run detect:test, node scripts/build-public.mjs --local. Vercel에 같은 커밋을 배포하고 /aleph.json의 저장소·커밋을 대조합니다. /에서 승인 상태, /operations.html에서 관측표를 엽니다. 승인 전 보호 요청은 거부되고, 검증 어댑터 미연결일 때 인증된 요청도503입니다. 정상 승인 CRUD는 공식 연결 후 별도 재시험합니다.
+3. 점검: 변경을 커밋하고 ignored bundle-notes.json에 실제 구현과 막힌 점을 적은 뒤 npm run bundle. artifacts/submission.json은 실제 HEAD/원격과 새 자기 점검으로 생성하며 커밋하지 않습니다. 로컬 시험을 심판 또는 운영 승인으로 보고하지 않습니다.
+4. 중지: Vercel의 기존 배포를 내리거나 프로젝트를 일시 중지하고, 제공 엔진이 연결돼 있다면 해당 자료실 허용 경로를 끕니다. DB·백업·감사 자료는 지우지 않습니다.
+5. 복구: git status와 diff로 이번 변경을 확인하고 필요한 내용을 보존한 뒤 검사한 커밋을 별도 checkout해 재배포합니다. reset --hard를 사용하지 않습니다. 정책 사본 버전/해시/범위를 확인하고 필요할 때 복원할 메모 ID 하나만 지정합니다. 다른 행과 서비스 규칙·감사 기록은 보존합니다. 복구 뒤 위 정상·금지 시험과 bundle, 작전실 새 관측을 다시 실행합니다.

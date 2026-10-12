@@ -121,6 +121,15 @@ export async function runAttackChecks(config) {
       results.push({ attackId: 'public_connection_asset', expected: '서버 키·시드 표식 없음',
         observed: `HTTP ${assetResponse.status}; leak marker: ${/sb_secret_[A-Za-z0-9_-]{12,}/u.test(assetBody) || assetBody.includes(config.sampleMarker)}` });
     }
+    if (config.step >= 12) {
+      const index = results.findIndex(row => row.attackId === 'local_detection_120');
+      if (index >= 0) results.splice(index, 1);
+      const response = await request('/api/operations-status');
+      const value = await response.json();
+      if (response.status !== 200 || value.schema !== 'vault.operations.v1') throw new Error('작전실 실제 관측 응답을 확인할 수 없습니다.');
+      results.push({ attackId: 'operations_observation', expected: '실제 관측·가상 시험·미실행 구분; 41종 미실행을 성공으로 세지 않음',
+        observed: `HTTP ${response.status}; matched=${value.counts.passed}; failed=${value.counts.failed}; notRun=${value.counts.notRun}; officialNotRun=${value.counts.officialEngineNotRun}` });
+    }
     return results;
   }
   if (config.step === 2) {

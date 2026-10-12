@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { collectOperationsStatus } from '../src/operations-status.mjs';
+import { readFile } from 'node:fs/promises';
+const config = { publicAppUrl: 'https://fixture.local' };
+const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
+
+test('dashboard counters come from actual calls; fake matrix status never becomes execution evidence', async () => {
+  const urls = [];
+  const fetchImpl = async (url, options) => { urls.push(url.pathname); assert.ok(options.alephEvidence.requestId);
+    if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 });
+    return new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }); };
+  const out = await collectOperationsStatus(config, matrix, { fetchImpl });
+  assert.equal(urls.length, 7); assert.equal(out.counts.passed, 11); assert.equal(out.counts.failed, 0);
+  assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null));
+  assert.equal(out.revocation.liveCount, null); assert.equal(out.detection.source, 'local_fixture'); assert.equal(out.recovery.verified, true);
+  assert.equal(out.counts.notRun, 3);
+  assert.ok(out.checks.filter(row => row.status !== 'not_run').every(row => row.requestId && row.checkedAt));
+  assert.ok(out.checks.filter(row => row.source === 'official_engine_unconnected').every(row => row.requestId === null && row.checkedAt === null));
+});
+
+test('unreachable and unexpectedly open APIs remain not_run/failed; no private body is recorded', async () => {
+  const fetchImpl = async url => { if (url.pathname === '/api/recovery-plan') throw new Error('private details');
+    return new Response('private note text must never be retained', { status: 200 }); };
+  const out = await collectOperationsStatus(config, matrix, { fetchImpl });
+  assert.equal(out.counts.failed, 5); assert.equal(out.counts.notRun, 4);
+  assert.equal(out.recovery.verified, false); assert.ok(!JSON.stringify(out).includes('private note text'));
+  assert.ok(!JSON.stringify(out).includes('private details'));
+});
+
+test('dashboard renders server observations and clears prior successes if a new read fails', async () => {
+  const elements = new Map();
+  const element = () => ({ textContent: '', children: [], append(child) { this.children.push(child); }, replaceChildren(...children) { this.children = children; } });
+  const document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element };
+  let unavailable = false;
+  const observations = await collectOperationsStatus(config, matrix, { fetchImpl: async url => url.pathname === '/api/recovery-plan'
+    ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
+    : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
+  const source = await readFile(new URL('../src/operations-browser.mjs', import.meta.url), 'utf8');
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  await new AsyncFunction('document', 'fetch', source)(document, async () => {
+    if (unavailable) throw new Error('network down');
+    return Response.json(observations);
+  });
+  assert.ok(elements.get('counts').textContent.includes('11건 일치'));
+  assert.ok(elements.get('counts').textContent.includes('3건 미실행'));
+  assert.equal(elements.get('matrix').children.length, 41);
+  assert.equal(elements.get('checks').children.length, 14);
+  unavailable = true; await elements.get('refresh').onclick();
+  assert.equal(elements.get('checks').children.length, 0); assert.equal(elements.get('matrix').children.length, 0);
+  assert.equal(elements.get('counts').textContent, '미확인');
+  assert.ok(elements.get('status').textContent.includes('통과로 표시하지 않습니다'));
+});
