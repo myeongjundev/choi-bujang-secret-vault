@@ -8,7 +8,7 @@ import { deploymentIdentity } from '../scripts/deployment-identity.mjs';
 test('registered reads preserve the five-field contract and run in isolation', async () => {
   const source = await readFile(new URL('../src/decider.mjs', import.meta.url), 'utf8');
   const isolated = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
-  for (const [path, route] of [['/notes/demo', 'GET /notes/:id'], ['/api/notes', 'GET /api/notes'], ['/api/notes/demo', 'GET /api/notes/:id']]) {
+  for (const [path, route] of [['/notes/demo', 'GET /notes/:id'], ['/api/my/notes', 'GET /api/my/notes'], ['/api/notes/demo', 'GET /api/notes/:id']]) {
     const { normal } = fixtureRequests();
     const req = { ...normal, path, route };
     const out = await isolated.decide(req);
@@ -36,7 +36,7 @@ test('unlisted services, writes and route/path mismatches never widen access', a
     { route: 'GET /api/notes', path: '/api/notes/all' }, { path: '/notes/../admin' }, { path: '/notes/%2e%2e' },
   ]) {
     const out = await decide({ ...fixtureRequests().normal, ...patch });
-    assert.equal(out.decision, 'deny'); assert.equal(out.reasonCode, 'route_not_allowed');
+    assert.equal(out.decision, 'deny'); assert.ok(['route_not_allowed', 'write_not_allowed'].includes(out.reasonCode));
   }
 });
 test('stage 6 deployment metadata preserves identity and rejects invalid stage values', async () => {

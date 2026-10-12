@@ -5,9 +5,11 @@ import { decide } from '../src/decider.mjs';
 import { fixtureRequests } from '../scripts/fixture-7.mjs';
 import { createNoticesHandler } from '../src/notices-api.mjs';
 
-test('zone policy permits precise notes edits; unknown services, functional IDs and query switches deny', async () => {
+test('zone policy allows self-list reads, denies ambiguous lists and mutations lacking ownership evidence', async () => {
   const normal = fixtureRequests().normal, id = randomUUID();
-  assert.equal((await decide({ ...normal, method: 'PUT', route: 'PUT /api/notes/:id', path: `/api/notes/${id}` })).decision, 'allow');
+  assert.equal((await decide({ ...normal, route: 'GET /api/my/notes', path: '/api/my/notes' })).decision, 'allow');
+  assert.equal((await decide({ ...normal, route: 'GET /api/notes', path: '/api/notes' })).decision, 'deny');
+  assert.equal((await decide({ ...normal, method: 'PUT', route: 'PUT /api/notes/:id', path: `/api/notes/${id}` })).decision, 'deny');
   for (const patch of [{ path: '/notes/export' }, { queryLength: 8 }, { service: 'notices' },
     { method: 'PUT', route: 'PUT /api/notes/:id', path: '/api/notes/export' }]) assert.equal((await decide({ ...normal, ...patch })).decision, 'deny');
 });

@@ -65,6 +65,15 @@ export async function runAttackChecks(config) {
       }
     }
     if (config.step >= 8) {
+      const { decide } = await import('./decider.mjs');
+      const { fixtureRequests } = await import('../scripts/fixture-7.mjs');
+      for (const [attackId, patch] of [
+        ['local_ambiguous_list', { path: '/api/notes', route: 'GET /api/notes' }],
+        ['local_unproven_write', { method: 'PUT', path: '/api/notices/demo', route: 'PUT /api/notices/:id' }],
+      ]) {
+        const out = await decide({ ...fixtureRequests().normal, ...patch });
+        results.push({ attackId, expected: 'local fixture deny; 운영 구역 연결 증거 아님', observed: `local fixture ${out.decision}; ${out.reasonCode}` });
+      }
       for (const method of ['GET', 'PUT']) {
         const response = await request('/api/notices/00000000-0000-4000-8000-000000000008', method);
         await response.text();
