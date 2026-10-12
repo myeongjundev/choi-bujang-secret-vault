@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "pretest": "node scripts/build-public.mjs --local",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/bundle.mjs",
     "build": "node scripts/build-public.mjs",
     "test:r5": "node --test test/r5.test.mjs",
     "bundle": "node scripts/bundle.mjs",
