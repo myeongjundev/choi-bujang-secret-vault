@@ -82,3 +82,45 @@ test('bundle HTTP observations correlate with their real case IDs without transm
     assert.equal(new Set(calls.map(call => call.options.alephEvidence.requestKey)).size, calls.length);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+const bundleFixture = { step: 12, publicAppUrl: 'https://fixture.local', sampleMarker: 'absent-fixture-marker',
+  originalApiUrl: 'https://fixture.supabase.co/rest/v1/user_notes' };
+function fixtureResponse(url) {
+  if (url.pathname === '/api/auth-config') return Response.json({ url: 'https://fixture.supabase.co', publishableKey: 'public-fixture' });
+  if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
+  if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
+  if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 11, failed: 0, notRun: 3, officialEngineNotRun: 41 } });
+  return new Response('{}', { status: url.pathname === '/data.json' ? 404 : url.pathname.startsWith('/api/') || url.pathname.startsWith('/rest/') ? 401 : 200 });
+}
+
+test('one unavailable dashboard does not abort other bundle observations or become a blocked attack', async () => {
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => {
+    if (url.pathname === '/api/operations-status') throw new Error('private error must not be retained');
+    return fixtureResponse(url);
+  } });
+  assert.equal(attempts.length, 20);
+  assert.equal(attempts.find(row => row.attackId === 'anonymous_read').observed, 'HTTP 401');
+  assert.match(attempts.find(row => row.attackId === 'operations_observation').observed, /^not_run;/u);
+  assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 1);
+  assert.ok(!JSON.stringify(attempts).includes('private error'));
+});
+
+test('whole-response deadlines end even if transport ignores AbortSignal or the response body stalls', async () => {
+  for (const fetchImpl of [async () => new Promise(() => {}), async () => ({ status: 200, text: () => new Promise(() => {}), json: () => new Promise(() => {}) })]) {
+    const before = Date.now();
+    const attempts = await runAttackChecks(bundleFixture, { fetchImpl, timeoutMs: 30 });
+    assert.ok(Date.now() - before < 1000);
+    assert.equal(attempts.length, 20);
+    assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 16);
+    assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed.startsWith('local fixture')));
+  }
+});
+
+test('malformed observation JSON is unavailable evidence, while unsafe original API configuration stops', async () => {
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => url.pathname === '/api/operations-status'
+    ? new Response('not JSON', { status: 200 }) : fixtureResponse(url) });
+  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run; HTTP 200; response_unreadable');
+  assert.ok(!JSON.stringify(attempts).includes('not JSON'));
+  await assert.rejects(runAttackChecks({ ...bundleFixture, originalApiUrl: 'https://other.supabase.co/rest/v1/user_notes' },
+    { fetchImpl: async url => fixtureResponse(url) }), /invalid_original_api_origin/u);
+});

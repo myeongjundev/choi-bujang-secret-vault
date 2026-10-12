@@ -106,6 +106,8 @@ backups/safe-policy.json은 커밋으로 고정한 공개 가능한 경로 정�
 
 첫 두 심판 접수는 UNV_RUN_ENVIRONMENT로 확인불가였습니다. [운영 측 공개 점검 표본](https://github.com/ChoiTimo/byteback-sample-pass/blob/main/src/attack-check.mjs)과 대조해 자기 점검/작전실 HTTP 요청의 관측 메타데이터를 alephEvidence의 caseId/requestKey로 맞췄습니다. 사례 ID는 반환한 실제 점검 ID에 연결하고 요청 키는 새 UUID로 생성합니다. 이 메타데이터를 HTTP 헤더·URL에 보내거나 신원/승인 근거로 사용하지 않습니다. 제출 묶음의 기존 attackId/expected/observed 3필드 계약은 유지합니다. 환경 오류의 원인을 이 차이라고 확정하지 않았습니다. 보완 뒤 회귀40개 통과, 실제 재제출 결과는 별도 확인합니다.
 
+세 번째도 같은 확인불가였습니다. 재검토에서 작전실 endpoint 하나의 네트워크 실패가 자기 점검 전체를 예외로 중단하는 상황을 재현했습니다. src/bundle-checks.mjs는 독립 HTTP 점검을 함께 실행하며 요청과 본문 읽기 전체에5초 제한을 둡니다. AbortSignal을 무시하는 환경도 명시적 시간 제한으로 끝납니다. 실행 못한 항목은 observed의 not_run으로 남기고 다른 항목은 계속 관측합니다. HTTP응답이 있으면 그 상태를 남기며 응답/JSON을 읽지 못한 것을 공격 차단으로 기록하지 않습니다. 공개 로그인 설정을 읽지 못했을 때 원본 API는 실행 못함으로 남깁니다. 원본 API 주소가 다른 출처라면 설정 오류로 중단합니다. 정책·보호 API·미연결 승인 검증은 유지합니다. 이 재현을 실제 심판 환경 오류의 원인으로 확정하지 않고 재제출로 확인합니다.
+
 ### 검사한 커밋에서 재현하기
 
 학생이 만든 부분은 src/decider.mjs, src/detect.mjs, public 접속/작전실 화면, api 자료실/사본 검증/복원, SQL 보관·복원 절차, 자기 점검 코드입니다. 제공 엔진은 ALEPH SDP engine이며 기기 등록·키 보관·로그인과 기기 결합·요청 서명 확인·판정 집행·감사 보관을 맡습니다. 이 저장소에는 제공 엔진의 키·바이너리·설치 명령을 포장하지 않습니다.
