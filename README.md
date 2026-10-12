@@ -1,4 +1,4 @@
-# BYTE BACK 자료실 · 9단계 저장점
+# BYTE BACK 자료실 · 10단계 저장점
 
 1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
 
@@ -64,4 +64,12 @@ src/decider.mjs는 공식 aleph.decision.v1 18필드 입력을 검사하고 devi
 
 ## 9단계 탐지
 
-docs/DETECT_EVENTS.md의 제공 연습 계약만 사용합니다. 같은 가명 주체의 GET가 임의 10분 창에서 120건을 초과할 때만 burst_read 사유로 propose_revocation을 제안합니다. 정확히 120건·다른 사용자 합산·시간 밖 조회는 observe, 잘못된 묶음은 거부합니다. 토큰·메모·실명은 로그나 파일에 저장하지 않습니다. 제공 계약에 네트워크/기기 대상 필드가 없어 만들지 않았습니다. 실제 회수·경과 시간·대상 기기 결합은 운영 엔진에서 별도 검증해야 합니다. npm run detect:test와 전체 회귀를 실행하며 실제 심판은 제출 후 기록합니다.
+docs/DETECT_EVENTS.md의 제공 연습 계약만 사용합니다. 같은 가명 주체의 GET가 임의 10분 창에서 120건을 초과할 때만 burst_read 사유로 propose_revocation을 제안합니다. 정확히 120건·다른 사용자 합산·시간 밖 조회는 observe, 잘못된 묶음은 거부합니다. 토큰·메모·실명은 로그나 파일에 저장하지 않습니다. 제공 계약에 네트워크/기기 대상 필드가 없어 만들지 않았습니다. 실제 회수·경과 시간·대상 기기 결합은 운영 엔진에서 별도 검증해야 합니다. npm run detect:test와 전체 회귀를 실행하며 9단계 실제 심판은 4b68f6cc117a5c073bcc3e5eea66d2e2fac7ad3d 커밋의 100/100점·조건 4개·가점 3개를 확인했습니다.
+
+## 10단계 한 건 복구
+
+서비스 notes의 복구 경로는 POST /api/restore/:noteId입니다. 로그인 사용자의 UUID와 비공개 사전 사본의 owner_id를 SQL RPC vault_restore_note에서 대조하고 ID·내용 SHA-256을 검증합니다. 요청에서 백업 본문/소유자를 받지 않습니다. 새 메모는 INSERT 시 처음 사본만 보관하며 수정·삭제 때 덮어쓰지 않습니다. 백업·복구 감사 테이블은 RLS와 PUBLIC/anon/authenticated 권한 회수를 적용하고 service_role에는 읽기/제한된 복구 함수 실행만 제공합니다. 한 트랜잭션에서 대상 한 건만 복원하고 해시 재검증 후 감사 기록에 추가하며 기존 이력은 지우지 않습니다.
+
+backups/safe-policy.json은 커밋으로 고정한 공개 가능한 경로 정책 사본입니다. src/policy-recovery.mjs는 고정 SHA-256·프로젝트·버전을 확인하고 planPolicyRestore로 notes의 전/후 차이와 확인값을 반환합니다. applyPolicyRestore는 동일 차이의 확인값이 있어야 시험 정책만 새 판 번호로 적용하고 다른 서비스·감사 이력을 보존합니다. 운영 엔진 정책 쓰기는 미연결입니다. 복구 API는 현재 notes 정책이 사전 사본과 다르면 정책 복구가 필요하다고 거부합니다.
+
+초기화: 본인 Supabase SQL Editor에서 sql/stage10.sql. DB 시험: sql/stage10-check.sql은 새 가상 B 메모만 생성해 변조/삭제 복원과 타인 거부를 확인하고 전체 트랜잭션을 ROLLBACK합니다. 기존 DB 메모를 시험 때문에 지우지 않습니다. 복구 뒤 npm run decider:test → npm run fixture:7 → npm run detect:test → node --test test/*.test.mjs → npm run build -- --local → 커밋 후 npm run bundle 순서로 정상 읽기, 소유자 A/B, 무인증/위조 토큰, 미등록 기기, 복합 이상, 구역 밖·공지 쓰기, 탐지 경계, 복구 오류를 재검증합니다. 실제 mTLS·운영 재인증·회수 집행은 미실행입니다.

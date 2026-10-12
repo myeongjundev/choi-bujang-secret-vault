@@ -90,6 +90,19 @@ export async function runAttackChecks(config) {
           observed: `local fixture ${out.action}; ${out.reasonCode ?? 'no_proposal'}` });
       }
     }
+    if (config.step >= 10) {
+      // Keep the bundle's 20-check maximum. Earlier local registration checks
+      // remain in the regression suite; replace two redundant bundle rows.
+      for (const id of ['local_forged_device_flag', 'local_wrong_service']) {
+        const index = results.findIndex(result => result.attackId === id);
+        if (index >= 0) results.splice(index, 1);
+      }
+      for (const [attackId, auth] of [['anonymous_restore', undefined], ['malformed_restore', 'Bearer invalid']]) {
+        const response = await request('/api/restore/00000000-0000-4000-8000-000000000010', 'POST', auth);
+        await response.text();
+        results.push({ attackId, expected: '401; 복원 실행 없음', observed: `HTTP ${response.status}` });
+      }
+    }
     return results;
   }
   if (config.step === 2) {
