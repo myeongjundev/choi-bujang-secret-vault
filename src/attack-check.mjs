@@ -80,6 +80,16 @@ export async function runAttackChecks(config) {
         results.push({ attackId: `anonymous_notice_${method.toLowerCase()}`, expected: '401; 공지 본문 없음', observed: `HTTP ${response.status}` });
       }
     }
+    if (config.step >= 9) {
+      const { detect } = await import('./detect.mjs');
+      for (const count of [120, 121]) {
+        const events = Array.from({ length: count }, (_, i) => ({ at: new Date(1700000000000 + i * 2000).toISOString(),
+          method: 'GET', identity: { sub: 'local_subject_fixture' } }));
+        const out = detect(events);
+        results.push({ attackId: `local_detection_${count}`, expected: `${count === 120 ? 'observe' : 'propose_revocation'}; 운영 회수 증거 아님`,
+          observed: `local fixture ${out.action}; ${out.reasonCode ?? 'no_proposal'}` });
+      }
+    }
     return results;
   }
   if (config.step === 2) {

@@ -1,4 +1,4 @@
-# BYTE BACK 자료실 · 8단계 저장점
+# BYTE BACK 자료실 · 9단계 저장점
 
 1~5단계 운영 심판 각 100/100점, 총 500/500점을 확인했습니다. 5단계는 메모 요청을 기존 서버 함수로만 처리하며 원본 Data API 직접 권한을 닫습니다.
 
@@ -60,4 +60,8 @@ src/decider.mjs는 공식 aleph.decision.v1 18필드 입력을 검사하고 devi
 
 ## 8단계 자원 구역
 
-메모는 notes, 공지는 vault_notices라는 다른 저장소와 /api/notices/:id 경로를 사용합니다. 메모는 SQL의 owner_id 조건으로 본인에게만 CRUD를 제공합니다. 공지 PUT은 검증된 사용자와 서버 환경변수 INSTRUCTOR_USER_IDS의 UUID 목록을 비교하며 요청 role은 무시합니다. 미설정 목록은 공지 수정을 허용하지 않습니다. src/decider.mjs는 notes의 정확한 읽기 경로만 허용하며 기능 ID와 쿼리 스위치는 거부합니다. 8단계 첫 심판 48점(S08_OTHER_ZONE_ALLOWED)의 원인인 모호한 GET /api/notes와 소유자·역할 검증이 불가능한 쓰기를 릴레이 허용표에서 제거했습니다. 본인 목록은 GET /api/my/notes로 구분하고 동일한 SQL 소유자 필터를 사용합니다. 기존 브라우저 /api/notes CRUD의 최종 API 소유자 검사는 보존합니다. 공지 역할의 운영 엔진 계약은 없어 해당 서비스의 릴레이 허용은 미구현입니다. sql/stage8.sql은 기존 데이터 보존형 신규 가상 공지 저장소입니다. 2026-10-13 본인 Supabase SQL Editor에서 실행하고 가상 공지 1건을 확인했습니다. 심판은 제출 후 별도 기록합니다. 시험 22개와 빌드 통과.
+메모는 notes, 공지는 vault_notices라는 다른 저장소와 /api/notices/:id 경로를 사용합니다. 메모는 SQL의 owner_id 조건으로 본인에게만 CRUD를 제공합니다. 공지 PUT은 검증된 사용자와 서버 환경변수 INSTRUCTOR_USER_IDS의 UUID 목록을 비교하며 요청 role은 무시합니다. 미설정 목록은 공지 수정을 허용하지 않습니다. src/decider.mjs는 notes의 정확한 읽기 경로만 허용하며 기능 ID와 쿼리 스위치는 거부합니다. 8단계 첫 심판 48점(S08_OTHER_ZONE_ALLOWED)의 원인인 모호한 GET /api/notes와 소유자·역할 검증이 불가능한 쓰기를 릴레이 허용표에서 제거했습니다. 본인 목록은 GET /api/my/notes로 구분하고 동일한 SQL 소유자 필터를 사용합니다. 기존 브라우저 /api/notes CRUD의 최종 API 소유자 검사는 보존합니다. 공지 역할의 운영 엔진 계약은 없어 해당 서비스의 릴레이 허용은 미구현입니다. sql/stage8.sql은 기존 데이터 보존형 신규 가상 공지 저장소입니다. 2026-10-13 본인 Supabase SQL Editor에서 실행하고 가상 공지 1건을 확인했습니다. 8단계 실제 심판은 9942798e0e10c8a2f756c583f67195ea4632265b 커밋의 100/100점·조건 5개·가점 3개를 확인했습니다. 시험 22개와 빌드 통과.
+
+## 9단계 탐지
+
+docs/DETECT_EVENTS.md의 제공 연습 계약만 사용합니다. 같은 가명 주체의 GET가 임의 10분 창에서 120건을 초과할 때만 burst_read 사유로 propose_revocation을 제안합니다. 정확히 120건·다른 사용자 합산·시간 밖 조회는 observe, 잘못된 묶음은 거부합니다. 토큰·메모·실명은 로그나 파일에 저장하지 않습니다. 제공 계약에 네트워크/기기 대상 필드가 없어 만들지 않았습니다. 실제 회수·경과 시간·대상 기기 결합은 운영 엔진에서 별도 검증해야 합니다. npm run detect:test와 전체 회귀를 실행하며 실제 심판은 제출 후 기록합니다.
