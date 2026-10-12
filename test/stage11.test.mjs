@@ -25,9 +25,17 @@ test('offline caching is restricted to static UI, without API/data/session cachi
   const events = {}, handlers = [];
   const define = new Function('self', 'caches', 'fetch', `${source}; return PUBLIC_UI;`);
   const files = define({ location: { origin: 'https://fixture.local' }, addEventListener(name, handler) { events[name] = handler; } }, {}, () => {});
-  assert.ok(files.every(path => !path.startsWith('/api/') && !['/', '/app.js', '/data.json'].includes(path)));
-  for (const path of ['/api/notes', '/api/auth-config', '/', '/connect.html?token=untrusted']) {
+  assert.ok(files.every(path => !path.startsWith('/api/') && !['/vault.html', '/app.js', '/data.json'].includes(path)));
+  for (const path of ['/api/notes', '/api/auth-config', '/vault.html', '/connect.html?token=untrusted']) {
     events.fetch({ request: { method: 'GET', url: `https://fixture.local${path}` }, respondWith() { handlers.push(path); } });
   }
   assert.deepEqual(handlers, []);
+});
+
+test('default entry is approval-only and the approved target retains the existing login workspace', async () => {
+  const root = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+  const vault = await readFile(new URL('../public/vault.html', import.meta.url), 'utf8');
+  assert.ok(root.includes('rel="manifest"')); assert.ok(root.includes('id="open-vault" disabled'));
+  assert.ok(!root.includes('id="workspace"')); assert.ok(!root.includes('id="notes"')); assert.ok(!root.includes('id="login"'));
+  assert.ok(vault.includes('id="workspace" hidden')); assert.ok(vault.includes('src="/app.js"'));
 });

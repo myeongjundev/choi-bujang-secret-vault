@@ -10,7 +10,10 @@ test('latest static files have no seed and browser uses the bundled SDK', async 
   await assert.rejects(access(new URL('../data.json', import.meta.url)));
   await assert.rejects(access(new URL('../public/data.json', import.meta.url)));
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-  assert.ok(html.includes('src="/app.js"'));
+  const vault = await readFile(new URL('../public/vault.html', import.meta.url), 'utf8');
+  assert.ok(vault.includes('src="/app.js"'));
+  assert.ok(html.includes('src="/connect.js"'));
   assert.ok(!html.includes('SUPABASE_SECRET_KEY'));
+  assert.ok(!vault.includes('SUPABASE_SECRET_KEY'));
   assert.ok(!/실습용 가상.{1,20}기록/u.test(html));
 });

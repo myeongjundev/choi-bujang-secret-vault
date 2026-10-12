@@ -23,7 +23,7 @@ $('request-approval').onclick = async () => {
     if (!response.ok) $('approval-detail').textContent = '공식 접속 도구가 연결되지 않아 승인 요청을 전달하지 못했습니다. 권한은 변경되지 않았습니다.';
   } catch { render(); }
 };
-$('open-vault').onclick = async () => { await refresh(); if (connectionView(state, navigator.onLine).canOpen) location.assign('/'); };
+$('open-vault').onclick = async () => { await refresh(); if (connectionView(state, navigator.onLine).canOpen) location.assign('/vault.html'); };
 window.addEventListener('offline', () => { state = null; render(); });
 window.addEventListener('online', refresh);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/connect-sw.js', { scope: '/' }).catch(() => {});

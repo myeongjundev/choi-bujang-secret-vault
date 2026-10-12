@@ -1,5 +1,5 @@
-const CACHE = 'byte-back-connect-public-v1';
-const PUBLIC_UI = ['/connect.html','/connect.js','/operations.css','/connect.webmanifest','/connect-icon.svg'];
+const CACHE = 'byte-back-connect-public-v2';
+const PUBLIC_UI = ['/','/connect.html','/connect.js','/operations.css','/connect.webmanifest','/connect-icon.svg'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLIC_UI))));
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
