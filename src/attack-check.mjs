@@ -107,6 +107,20 @@ export async function runAttackChecks(config) {
       results.push({ attackId: 'backup_verification', expected: 'HTTP 200; backupVerified true; scope notes; 정책 쓰기 없음',
         observed: `HTTP ${response.status}; backupVerified=${data.backupVerified === true}; scope=${data.scope ?? 'none'}` });
     }
+    if (config.step >= 11) {
+      for (const id of ['local_ambiguous_list', 'local_unproven_write']) {
+        const index = results.findIndex(result => result.attackId === id);
+        if (index >= 0) results.splice(index, 1);
+      }
+      const stateResponse = await request('/api/device-status');
+      const state = await stateResponse.json();
+      results.push({ attackId: 'device_adapter_availability', expected: '운영 연결 여부를 사실대로 표시; 설치 표시로 승인하지 않음',
+        observed: `HTTP ${stateResponse.status}; connected=${state.connected === true}; approval=${state.approval ?? 'unknown'}` });
+      const assetResponse = await request('/connect.js');
+      const assetBody = await assetResponse.text();
+      results.push({ attackId: 'public_connection_asset', expected: '서버 키·시드 표식 없음',
+        observed: `HTTP ${assetResponse.status}; leak marker: ${/sb_secret_[A-Za-z0-9_-]{12,}/u.test(assetBody) || assetBody.includes(config.sampleMarker)}` });
+    }
     return results;
   }
   if (config.step === 2) {
