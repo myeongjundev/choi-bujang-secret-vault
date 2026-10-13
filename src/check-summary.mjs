@@ -1,25 +1,23 @@
 // Same per-request results as the submission runner; no saved receipt or body.
-import { runBundleChecks } from './bundle-checks.mjs';
+import { runAttackChecks } from './attack-check.mjs';
 import { normalizeCheckResults } from './check-results.mjs';
 import { SOURCES, SOURCE_OF } from './sources.mjs';
+import { RULE_IDS } from './decider.mjs';
 
-export function summarizeChecks(attempts, { commit = null, checkedAt = new Date().toISOString(), plannedCases = [] } = {}) {
-  attempts = normalizeCheckResults(attempts);
-  const officialCases = plannedCases.map(({ id, stage, name, expected }) => ({ id, stage, name, expected,
-    status: 'not_run', result: 'not_run', source: 'official_engine_unconnected', requestId: null, checkedAt: null }));
-  return { schema: 'vault.checks.v1', source: 'fresh_submission_checks', commit: /^[a-f\d]{40}$/u.test(commit ?? '') ? commit : null,
-    checkedAt, total: attempts.length, blocked: attempts.filter(row => row.result === 'blocked').length,
+export function summarizeChecks(attempts, { commit = null, checkedAt = new Date().toISOString(), target = null, rules = [] } = {}) {
+  if (!Array.isArray(attempts)) throw new Error('invalid_check_results');
+  attempts = normalizeCheckResults(attempts.map(row => row && typeof row === 'object' && !Array.isArray(row)
+    ? { attackId: row.attackId, stage: row.stage, expected: row.expected, observed: row.observed, result: row.result } : row));
+  if (attempts.some(row => typeof row.attackId !== 'string' || !row.attackId
+    || !Number.isInteger(row.stage) || row.stage < 1 || row.stage > 12
+    || typeof row.expected !== 'string' || !row.expected || typeof row.observed !== 'string' || !row.observed)) throw new Error('invalid_check_results');
+  return { checkedAt, commit: /^[a-f\d]{40}$/u.test(commit ?? '') ? commit : null, target, rules: [...rules],
+    total: attempts.length, blocked: attempts.filter(row => row.result === 'blocked').length,
     failed: attempts.filter(row => row.result === 'breached').length, notRun: attempts.filter(row => row.result === 'not_run').length,
-    httpDenied: attempts.filter(row => row.result === 'blocked' && !row.attackId.startsWith('local_')).length,
-    fixedFixtureReady: attempts.filter(row => row.result === 'blocked' && row.attackId.startsWith('local_')).length,
     recordSource: SOURCE_OF.attackCheck, sources: SOURCES,
-    attempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result })),
-    attackAttempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result,
-      source: result === 'not_run' ? 'not_run' : attackId.startsWith('local_') ? 'fixed_fixture_http' : 'live_http' })),
-    official: { total: officialCases.length, blocked: 0, failed: 0, notRun: officialCases.length, cases: officialCases },
-    provenance: { engine: 'ALEPH SDP 엔진', operationalConnection: 'not_connected',
-      student: ['학생 판정기', '학생 탐지 규칙', '접속 앱', '자료실 API', '작전실', '고정 가상 규칙 시험'] } };
+    attempts,
+  };
 }
 export async function collectCheckSummary(config, options = {}) {
-  return summarizeChecks(await runBundleChecks(config, options), { commit: options.commit, plannedCases: options.plannedCases });
+  return summarizeChecks(await runAttackChecks(config, options), { commit: options.commit, target: config.publicAppUrl, rules: RULE_IDS });
 }

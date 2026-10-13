@@ -23,16 +23,18 @@
 
 | 목록 | 총 항목 | 기대 조건 일치 | 불일치 | 미실행 |
 | --- | ---: | ---: | ---: | ---: |
-| 제출 점검 | 11 | 9 | 0 | 2 |
+| 제출 점검 | 12 | 10 | 0 | 2 |
 | 공식 운영 계획 | 41 | 0 | 0 | 41 |
 
-제출 점검의 실측 9건은 실제 HTTP 거부 5건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 복원 POST와 서명 없는 수정 PUT은 GET/HEAD 전용 제출 점검에서 보내지 않아 각각 observed와 result가 not_run이다. 운영 재현의 미실행은 공식 계획 41행으로 기록한다. 별도 대표 실행 행은 만들지 않는다. 공식 운영 계획 41행은 status와 result가 모두 not_run이며 관측 ID·시각은 null이다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
+제출 점검의 실측 10건은 실제 HTTP 거부 6건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 4단계의 무인증 타인 메모 한 건 조회를 실제 GET으로 함께 점검한다. 복원 POST와 서명 없는 수정 PUT은 GET/HEAD 전용 제출 점검에서 보내지 않아 각각 observed와 result가 not_run이다. 운영 재현의 미실행은 별도 공식 계획 41행으로 기록한다. 별도 대표 실행 행은 만들지 않는다. 공식 운영 계획 41행은 status와 result가 모두 not_run이며 관측 ID·시각은 null이다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
 
 학생 서버의 고정 가상 규칙은 정해진 가상 입력으로 판정기·탐지기를 실행한다. ready는 그 기대 조건의 일치 여부다. 제공 엔진의 실제 기기 승인과 회수는 미실행이다. 실제 점검의 실패 응답은 breached, 요청·응답을 받지 못한 항목은 not_run으로 기록한다.
 
 고정 가상 응답에는 caseId, 학생 구성 요소 source, engine(ALEPH SDP 엔진), engineEnforced(not_run)를 함께 표시한다. ready=true는 가상 조건 일치이며 엔진 집행 상태를 바꾸지 않는다. 요약의 sources와 recordSource는 이 출처를 표시하고 attempts는 제출과 같은 다섯 필드의 점검 행이다.
 
-제출 JSON의 counts는 제출 점검만 센다. officialCounts는 공식 운영 계획만 센다. /api/checks는 같은 점검 함수의 새 HTTP 응답으로 수치를 계산하며 공식 목록은 별도 official에 둔다. /operations.html의 제출 사례와 공식 계획 표는 이 요약 API의 같은 응답에서 읽는다. 별도 보조 HTTP 관측, 로컬 가상 계산, 운영 세션 대기를 각각 다른 표와 집계로 표시한다. 숫자는 실행 시 응답에 따라 변한다.
+제출 JSON은 공식 제출 계약의 attackAttempts 한 배열에 이번 점검만 기록한다. /api/checks는 같은 점검 함수의 새 HTTP 응답으로 네 수치를 계산하고 attempts 한 배열에 같은 다섯 필드 행을 둔다. 공식 계획은 이 실행 기록에 섞지 않고 /api/operations-status의 attackMatrix에서 별도로 읽는다. /operations.html은 제출 점검, 보조 HTTP 관측, 로컬 가상 계산, 운영 세션 대기, 공식 계획을 각각 다른 표로 표시한다. 숫자는 실행 시 응답에 따라 변한다.
+
+src/attack-check.mjs는 import 없는 독립 점검 파일이다. 공개 URL 또는 설정 객체를 받아 실제 GET 관측만 기록한다. 환경파일·설정파일·판정기 모듈에 의존하지 않으며 판정기·탐지기의 고정 시험도 실제 /api/checks?case=… 응답을 읽는다. 원본 익명 읽기는 공개 인증 설정의 HTTPS 출처와 설정의 원본 주소를 대조한 뒤 수행한다.
 
 첫 화면 아래 탈환 작전실 요약은 /api/checks의 total·blocked·failed·notRun을 그대로 옮긴다. 로그인과 기기 승인 없이 기록을 읽으며 실패하거나 집계가 불완전하면 네 수치를 비운다. 「점검 기록 다시 확인」으로 새 응답을 확인한다.
 

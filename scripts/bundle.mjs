@@ -91,19 +91,15 @@ try {
   if (new Set(attackAttempts.map(item => item.attackId)).size !== attackAttempts.length) {
     fail('공격 점검 ID가 중복되었습니다.');
   }
-  const officialAttackMatrix = config.step === 12 ? JSON.parse(readFileSync(join(root, 'data', 'attack-matrix.json'), 'utf8')).cases.map(({ id, stage, name, expected }) => ({
-    id, stage, name, expected, status: 'not_run', result: 'not_run', source: 'official_engine_unconnected', requestId: null, checkedAt: null,
-  })) : [];
+  // A submission contains this run's attempts. The separate operations API
+  // retains the unexecuted official plan; it is not an execution receipt.
+  const counts = { total: attackAttempts.length, blocked: attackAttempts.filter(row => row.result === 'blocked').length,
+    failed: attackAttempts.filter(row => row.result === 'breached').length,
+    notRun: attackAttempts.filter(row => row.result === 'not_run' || row.observed === 'not_run').length };
   const bundle = {
     schema: 'aleph.defense.submission.v2', step: config.step, commit, repoUrl, checkedAt: new Date().toISOString(),
     changedFiles, policyRules,
-    attackAttempts, officialAttackMatrix,
-    counts: { total: attackAttempts.length, blocked: attackAttempts.filter(row => row.result === 'blocked').length,
-      failed: attackAttempts.filter(row => row.result === 'breached').length,
-      notRun: attackAttempts.filter(row => row.result === 'not_run' || row.observed === 'not_run').length },
-    officialCounts: { total: officialAttackMatrix.length, blocked: 0, failed: 0, notRun: officialAttackMatrix.length },
-    provenance: { engine: 'ALEPH SDP 엔진', operationalConnection: 'not_connected',
-      student: ['학생 판정기', '탐지 규칙', '접속 앱', '자료실 API', '작전실', '고정 가상 규칙 시험'] },
+    attackAttempts,
     explanation: notes.explanation.trim(), blockedAt: notes.blockedAt ?? null,
     identityProvider: config.identityProvider ?? null, allowedRoutes: config.allowedRoutes ?? [],
     originalApiUrl: config.originalApiUrl ?? null, restoreRoute: config.restoreRoute ?? null,
@@ -112,7 +108,7 @@ try {
   mkdirSync(join(root, 'artifacts'), { recursive: true });
   const output = join(root, 'artifacts', 'submission.json');
   writeFileSync(output, `${JSON.stringify(bundle, null, 2)}\n`, { encoding: 'utf8', flag: 'w' });
-  process.stdout.write(`제출 묶음 JSON 생성: ${output}\n단계 ${bundle.step} · 커밋 ${commit.slice(0, 12)} · 바뀐 파일 ${changedFiles.length}개 · 규칙 ${policyRules.length}개 · 점검 항목 ${bundle.counts.total}개 · 실측 ${bundle.counts.total - bundle.counts.notRun}개 · 미실행 ${bundle.counts.notRun}개\n`);
+  process.stdout.write(`제출 묶음 JSON 생성: ${output}\n단계 ${bundle.step} · 커밋 ${commit.slice(0, 12)} · 바뀐 파일 ${changedFiles.length}개 · 규칙 ${policyRules.length}개 · 점검 항목 ${counts.total}개 · 실측 ${counts.total - counts.notRun}개 · 미실행 ${counts.notRun}개\n`);
 } catch (error) {
   process.stderr.write(`제출 묶음 생성 중 첫 오류: ${error.message}\n`);
   process.exitCode = 1;
