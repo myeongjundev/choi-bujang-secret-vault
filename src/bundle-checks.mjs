@@ -29,9 +29,10 @@ const notRun = () => 'not_run';
 const STAGES = { anonymous_read: 3, malformed_token: 3, static_seed: 2, direct_anonymous_read: 5,
   public_asset_index: 5, public_asset_app: 5, public_asset_identity: 5, anonymous_notice_get: 8,
   backup_verification: 10, device_adapter_availability: 11, public_connection_asset: 11, operations_observation: 12 };
+Object.assign(STAGES, { local_unregistered_device: 6, local_compound_risk: 7, local_unknown_route: 8, local_detection_121: 9 });
 const row = (attackId, expected, result, accepts = value => value.status === Number(expected.match(/\d{3}/u)?.[0])) => ({
   attackId, stage: STAGES[attackId], expected,
-  observed: result.ran ? `HTTP ${result.status}` : notRun(result),
+  observed: result.ran ? `HTTP ${result.status}${typeof result.value?.ready === 'boolean' ? `; jsonReady=${result.value.ready}` : ''}` : notRun(result),
   result: !result.ran ? 'not_run' : accepts(result) ? 'blocked' : 'breached',
 });
 
@@ -96,6 +97,21 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
   // A failed case cannot cancel unrelated observations. At most two deadlines
   // are sequential (public auth-config then the original table request).
   const results = await Promise.all(tasks.map(task => task()));
+  const attackIds = new Set(['anonymous_read', 'malformed_token', 'static_seed', 'direct_anonymous_read', 'anonymous_notice_get']);
+  if (config.step === 12) {
+    const fixedChecks = await Promise.all([
+      ['local_unregistered_device', 'fixed fixture unregistered deny'], ['local_compound_risk', 'fixed fixture compound step_up'],
+      ['local_unknown_route', 'fixed fixture unknown route deny'], ['local_detection_121', 'fixed fixture revocation proposal'],
+    ].map(async ([id, expected]) => {
+      const result = await request(`/api/checks?case=${id}`, id, { read: async response => {
+        const value = await response.json();
+        if (typeof value?.ready !== 'boolean' || value.source !== 'fixed_fixture') throw new Error('invalid_fixed_fixture_response');
+        return value;
+      } });
+      return row(id, `${expected}; 운영 연결 증거 아님`, result, value => value.status === 200 && value.value.ready === true);
+    }));
+    return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...fixedChecks];
+  }
   const local = [];
   const decisionCase = async (id, patch, expected) => {
     const out = await decide({ ...fixtureRequests().normal, ...patch });
@@ -124,6 +140,5 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
   }
   // Successful public/health reads are observations, not blocked attacks.
   // Keep their failures/unavailability visible; never inflate a defense count.
-  const attackIds = new Set(['anonymous_read', 'malformed_token', 'static_seed', 'direct_anonymous_read', 'anonymous_notice_get']);
   return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...local];
 }

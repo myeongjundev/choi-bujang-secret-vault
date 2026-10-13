@@ -10,7 +10,10 @@ export function summarizeChecks(attempts, { commit = null, checkedAt = new Date(
   return { schema: 'vault.checks.v1', source: 'fresh_submission_checks', commit: /^[a-f\d]{40}$/u.test(commit ?? '') ? commit : null,
     checkedAt, total: attempts.length, blocked: attempts.filter(row => row.result === 'blocked').length,
     failed: attempts.filter(row => row.result === 'breached').length, notRun: attempts.filter(row => row.result === 'not_run').length,
-    attackAttempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result })),
+    httpDenied: attempts.filter(row => row.result === 'blocked' && !row.attackId.startsWith('local_')).length,
+    fixedFixtureReady: attempts.filter(row => row.result === 'blocked' && row.attackId.startsWith('local_')).length,
+    attackAttempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result,
+      source: attackId.startsWith('local_') ? 'fixed_fixture_http' : 'live_http' })),
     official: { total: officialCases.length, blocked: 0, failed: 0, notRun: officialCases.length, cases: officialCases } };
 }
 export async function collectCheckSummary(config, options = {}) {

@@ -24,7 +24,7 @@ async function refresh() {
     const summary = await summaryResponse.json();
     if (summary.schema !== 'vault.checks.v1' || ['total', 'blocked', 'failed', 'notRun'].some(key => !Number.isInteger(summary[key]) || summary[key] < 0)
       || summary.total !== summary.blocked + summary.failed + summary.notRun) throw new Error('invalid_summary');
-    $('submission-counts').textContent = `제출 점검 ${summary.total}항목 · 실제 거부 ${summary.blocked}건 · 불일치 ${summary.failed}건 · 미실측 ${summary.notRun}건. 공식 계획 ${summary.official?.total ?? 0}항목 · 차단 ${summary.official?.blocked ?? 0}건 · 실패 ${summary.official?.failed ?? 0}건 · 미실행 ${summary.official?.notRun ?? 0}건. 확인 ${summary.checkedAt} · 커밋 ${summary.commit?.slice(0, 12) ?? '미확인'}`;
+    $('submission-counts').textContent = `제출 점검 ${summary.total}항목 · 방어 조건 확인 ${summary.blocked}건(HTTP 거부 ${summary.httpDenied ?? 0}건 · 서버 가상 규칙 ${summary.fixedFixtureReady ?? 0}건) · 불일치 ${summary.failed}건 · 미실측 ${summary.notRun}건. 공식 계획 ${summary.official?.total ?? 0}항목 · 차단 ${summary.official?.blocked ?? 0}건 · 실패 ${summary.official?.failed ?? 0}건 · 미실행 ${summary.official?.notRun ?? 0}건. 확인 ${summary.checkedAt} · 커밋 ${summary.commit?.slice(0, 12) ?? '미확인'}`;
     $('rules').textContent = data.policyRules.join(', ');
     $('detection').textContent = `${data.detection.action} · 로컬 가상 사건`;
     $('revocation').textContent = '실제 회수 집행 미연결';

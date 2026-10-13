@@ -7,6 +7,7 @@ import { collectCheckSummary, summarizeChecks } from '../src/check-summary.mjs';
 import checkSummaryHandler from '../api/checks.mjs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { runFixedRuleCheck } from '../src/fixed-rule-check.mjs';
 const config = { publicAppUrl: 'https://fixture.local' };
 const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
 
@@ -73,6 +74,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
     assert.ok(!JSON.stringify(options.headers).includes(options.alephEvidence.requestKey));
     assert.ok(!url.href.includes(options.alephEvidence.requestKey));
     if (url.pathname === '/api/auth-config') return Response.json({ url: 'https://fixture.supabase.co', publishableKey: 'public-fixture' });
+    if (url.pathname === '/api/checks') return Response.json(await runFixedRuleCheck(url.searchParams.get('case')));
     if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
     if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
     if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 11, failed: 0, notRun: 3, officialEngineNotRun: 41 } });
@@ -92,7 +94,8 @@ test('bundle HTTP observations correlate with their real case IDs without transm
 
 const bundleFixture = { step: 12, publicAppUrl: 'https://fixture.local', sampleMarker: 'absent-fixture-marker',
   originalApiUrl: 'https://fixture.supabase.co/rest/v1/user_notes' };
-function fixtureResponse(url) {
+async function fixtureResponse(url) {
+  if (url.pathname === '/api/checks') return Response.json(await runFixedRuleCheck(url.searchParams.get('case')));
   if (url.pathname === '/api/auth-config') return Response.json({ url: 'https://fixture.supabase.co', publishableKey: 'public-fixture' });
   if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
   if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
@@ -108,7 +111,7 @@ test('one unavailable dashboard does not abort other bundle observations or beco
   assert.equal(attempts.length, 10);
   assert.equal(attempts.find(row => row.attackId === 'anonymous_read').observed, 'HTTP 401');
   assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run');
-  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 5);
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 1);
   assert.ok(!JSON.stringify(attempts).includes('private error'));
 });
 
@@ -151,8 +154,8 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
     return fixtureResponse(url);
   } });
   assert.equal(attempts.length, 9);
-  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
-  assert.equal(calls.length, 13); // auth-config precedes the direct table read
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 0);
+  assert.equal(calls.length, 17); // auth-config precedes table read; four fixed-case HTTP calls
   assert.ok(!calls.some(row => row.path.startsWith('/api/restore/')));
   for (const id of ['anonymous_create', 'anonymous_notice_put', 'anonymous_restore', 'malformed_restore']) {
     assert.ok(!attempts.some(row => row.attackId === id));
@@ -161,18 +164,20 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
   assert.ok(!attempts.some(row => row.attackId === 'backup_verification'));
 });
 
-test('bundle claims only recorded HTTP statuses and marks non-network fixtures not_run', async () => {
+test('bundle claims only recorded HTTP states and actual ready values from fixed-case responses', async () => {
   const traced = new Map();
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async (url, options) => {
-    const response = fixtureResponse(url);
-    traced.set(options.alephEvidence.caseId, response.status);
+    const response = await fixtureResponse(url);
+    const body = await response.clone().text();
+    let ready; try { ready = JSON.parse(body).ready; } catch {}
+    traced.set(options.alephEvidence.caseId, { status: response.status, ready });
     return response;
   } });
   for (const row of attempts) {
     assert.equal(row.observed, traced.has(row.attackId)
-      ? `HTTP ${traced.get(row.attackId)}` : 'not_run');
+      ? `HTTP ${traced.get(row.attackId).status}${typeof traced.get(row.attackId).ready === 'boolean' ? `; jsonReady=${traced.get(row.attackId).ready}` : ''}` : 'not_run');
   }
-  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 0);
   assert.ok(!JSON.stringify(attempts.map(row => row.observed)).match(/fixture|leak marker|connected|scope|matched|note count/u));
 });
 
@@ -193,14 +198,14 @@ test('submission results and fresh screen summary use the same real responses, i
   const attempts = await runAttackChecks(bundleFixture, options);
   const summary = await collectCheckSummary(bundleFixture, options);
   assert.deepEqual({ total: summary.total, blocked: summary.blocked, failed: summary.failed, notRun: summary.notRun },
-    { total: 9, blocked: 5, failed: 0, notRun: 4 });
+    { total: 9, blocked: 9, failed: 0, notRun: 0 });
   assert.deepEqual(summarizeChecks(attempts, { commit: summary.commit, checkedAt: summary.checkedAt }), summary);
   const failing = await collectCheckSummary(bundleFixture, { fetchImpl: async url => {
     if (url.pathname === '/api/notes') return new Response('unexpected', { status: 200 });
     if (url.pathname === '/api/operations-status') throw new Error('unavailable');
     return fixtureResponse(url);
   } });
-  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 5); assert.equal(failing.blocked, 3);
+  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 1); assert.equal(failing.blocked, 7);
   assert.equal(failing.total, failing.blocked + failing.failed + failing.notRun);
   assert.throws(() => summarizeChecks([{ result: 'invented' }]), /invalid_check_results/u);
 });
@@ -223,20 +228,21 @@ test('summary API refuses mutations and arbitrary cases and exposes only a fresh
     }
     const res = response(); await checkSummaryHandler({ method: 'GET' }, res);
     assert.equal(res.code, 200); assert.equal(res.body.total, 9);
-    assert.equal(res.body.blocked, 5); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 4);
+    assert.equal(res.body.blocked, 9); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 0);
+    assert.equal(res.body.httpDenied, 5); assert.equal(res.body.fixedFixtureReady, 4);
     assert.equal(res.body.attackAttempts.length, 9);
     assert.equal(res.body.official.total, 41); assert.equal(res.body.official.notRun, 41);
     assert.equal(res.body.official.blocked, 0); assert.equal(res.body.official.failed, 0);
-    assert.equal(calls, 13); assert.ok(!JSON.stringify(res.body).includes('public-fixture'));
+    assert.equal(calls, 17); assert.ok(!JSON.stringify(res.body).includes('public-fixture'));
   } finally { globalThis.fetch = originalFetch; }
 });
 
 test('unexecuted network cases and successful normal reads never inflate blocked attack totals', async () => {
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
   const blocked = attempts.filter(row => row.result === 'blocked');
-  assert.equal(blocked.length, 5);
-  assert.ok(blocked.every(row => /^HTTP (401|403|404)$/u.test(row.observed)));
-  assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed === 'not_run' && row.result === 'not_run'));
+  assert.equal(blocked.length, 9);
+  assert.equal(blocked.filter(row => /^HTTP (401|403|404)$/u.test(row.observed)).length, 5);
+  assert.equal(blocked.filter(row => row.observed === 'HTTP 200; jsonReady=true').length, 4);
   const out = await collectOperationsStatus(config, matrix, { fetchImpl: async url => url.pathname === '/api/recovery-plan'
     ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
@@ -287,4 +293,32 @@ test('bundle builds official unrun evidence under the judge Git-command allowlis
   assert.equal(writes[0].officialAttackMatrix.length, 41);
   assert.ok(writes[0].officialAttackMatrix.every(row => row.result === 'not_run' && row.requestId === null && row.checkedAt === null));
   assert.equal(calls.filter(args => args[0] === 'show').length, 1);
+});
+
+test('fixed-case API computes only four fictional conditions and never accepts a caller identity or input', async () => {
+  const response = () => ({ code: null, body: null, setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } });
+  for (const caseId of ['local_unregistered_device', 'local_compound_risk', 'local_unknown_route', 'local_detection_121']) {
+    const res = response();
+    await checkSummaryHandler({ method: 'GET', query: { case: caseId, subjectId: 'caller_claim', deviceRegistered: true } }, res);
+    assert.equal(res.code, 200); assert.equal(res.body.ready, true); assert.equal(res.body.source, 'fixed_fixture');
+    assert.ok(!JSON.stringify(res.body).includes('caller_claim'));
+  }
+  assert.equal(await runFixedRuleCheck('__proto__'), null); assert.equal(await runFixedRuleCheck('local_step_up_verified'), null);
+  const res = response(); await checkSummaryHandler({ method: 'GET', query: { case: ['local_unknown_route'] } }, res);
+  assert.equal(res.code, 400);
+});
+
+test('fixed-case false or missing responses never become ready success or operational execution', async () => {
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => {
+    if (url.pathname === '/api/checks' && url.searchParams.get('case') === 'local_compound_risk') return Response.json({ source: 'fixed_fixture', ready: false });
+    if (url.pathname === '/api/checks' && url.searchParams.get('case') === 'local_detection_121') throw new Error('unavailable');
+    return fixtureResponse(url);
+  } });
+  const falseCase = attempts.find(row => row.attackId === 'local_compound_risk');
+  assert.equal(falseCase.observed, 'HTTP 200; jsonReady=false'); assert.equal(falseCase.result, 'breached');
+  const unavailable = attempts.find(row => row.attackId === 'local_detection_121');
+  assert.equal(unavailable.observed, 'not_run'); assert.equal(unavailable.result, 'not_run');
+  const summary = summarizeChecks(attempts, { plannedCases: matrix.cases });
+  assert.equal(summary.httpDenied, 5); assert.equal(summary.fixedFixtureReady, 2);
+  assert.equal(summary.failed, 1); assert.equal(summary.notRun, 1); assert.equal(summary.official.notRun, 41);
 });
