@@ -65,7 +65,7 @@ test('dashboard renders server observations and clears prior successes if a new 
   assert.ok(elements.get('local-counts').textContent.includes('로컬 가상 계산 4항목'));
   assert.ok(elements.get('engine-counts').textContent.includes('운영 미연결 3항목 · 미실행 3건'));
   assert.equal(elements.get('matrix').children.length, 41);
-  assert.equal(elements.get('submission-checks').children.length, 9);
+  assert.equal(elements.get('submission-checks').children.length, 11);
   assert.equal(elements.get('checks').children.length, 7);
   assert.equal(elements.get('local-checks').children.length, 4);
   assert.equal(elements.get('engine-checks').children.length, 3);
@@ -103,7 +103,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
   };
   try {
     const attempts = await runAttackChecks(configuration);
-    assert.equal(attempts.length, 9);
+    assert.equal(attempts.length, 11);
     assert.ok(attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed,result,stage'));
     for (const row of attempts.filter(row => row.observed !== 'not_run')) {
       assert.equal(calls.filter(call => call.options.alephEvidence.caseId === row.attackId).length, 1);
@@ -128,10 +128,10 @@ test('one unavailable dashboard does not abort other bundle observations or beco
     if (url.pathname === '/api/operations-status') throw new Error('private error must not be retained');
     return fixtureResponse(url);
   } });
-  assert.equal(attempts.length, 10);
+  assert.equal(attempts.length, 12);
   assert.equal(attempts.find(row => row.attackId === 'anonymous_read').observed, 'HTTP 401');
   assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run');
-  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 1);
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 3);
   assert.ok(!JSON.stringify(attempts).includes('private error'));
 });
 
@@ -140,8 +140,8 @@ test('whole-response deadlines end even if transport ignores AbortSignal or the 
     const before = Date.now();
     const attempts = await runAttackChecks(bundleFixture, { fetchImpl, timeoutMs: 30 });
     assert.ok(Date.now() - before < 1000);
-    assert.equal(attempts.length, 16);
-    assert.equal(attempts.filter(row => row.observed === 'not_run').length, 16);
+    assert.equal(attempts.length, 18);
+    assert.equal(attempts.filter(row => row.observed === 'not_run').length, 18);
     assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed === 'not_run'));
   }
 });
@@ -162,7 +162,7 @@ test('R5 config input and public-example URL input execute identical observation
     : fixtureResponse(url) };
   const fromConfig = await runAttackChecks(repositoryConfig, options);
   const fromUrl = await runAttackChecks(repositoryConfig.publicAppUrl, options);
-  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 9);
+  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 11);
   await assert.rejects(runAttackChecks('http://fixture.local', options), /invalid_observation_origin/u);
 });
 
@@ -173,12 +173,16 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
     calls.push({ path: url.pathname, method: options.method });
     return fixtureResponse(url);
   } });
-  assert.equal(attempts.length, 9);
-  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 0);
+  assert.equal(attempts.length, 11);
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 2);
   assert.equal(calls.length, 17); // auth-config precedes table read; four fixed-case HTTP calls
   assert.ok(!calls.some(row => row.path.startsWith('/api/restore/')));
-  for (const id of ['anonymous_create', 'anonymous_notice_put', 'anonymous_restore', 'malformed_restore']) {
+  for (const id of ['anonymous_create', 'anonymous_notice_put', 'malformed_restore']) {
     assert.ok(!attempts.some(row => row.attackId === id));
+  }
+  for (const id of ['anonymous_restore', 'unsigned_note_write']) {
+    const attempt = attempts.find(row => row.attackId === id);
+    assert.equal(attempt.observed, 'not_run'); assert.equal(attempt.result, 'not_run');
   }
   assert.ok(attempts.some(row => row.attackId === 'anonymous_read' && row.observed === 'HTTP 401'));
   assert.ok(!attempts.some(row => row.attackId === 'backup_verification'));
@@ -197,7 +201,7 @@ test('bundle claims only recorded HTTP states and actual ready values from fixed
     assert.equal(row.observed, traced.has(row.attackId)
       ? `HTTP ${traced.get(row.attackId).status}${typeof traced.get(row.attackId).ready === 'boolean' ? `; jsonReady=${traced.get(row.attackId).ready}` : ''}` : 'not_run');
   }
-  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 0);
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 2);
   assert.ok(!JSON.stringify(attempts.map(row => row.observed)).match(/fixture|leak marker|connected|scope|matched|note count/u));
 });
 
@@ -218,14 +222,14 @@ test('submission results and fresh screen summary use the same real responses, i
   const attempts = await runAttackChecks(bundleFixture, options);
   const summary = await collectCheckSummary(bundleFixture, options);
   assert.deepEqual({ total: summary.total, blocked: summary.blocked, failed: summary.failed, notRun: summary.notRun },
-    { total: 9, blocked: 9, failed: 0, notRun: 0 });
+    { total: 11, blocked: 9, failed: 0, notRun: 2 });
   assert.deepEqual(summarizeChecks(attempts, { commit: summary.commit, checkedAt: summary.checkedAt }), summary);
   const failing = await collectCheckSummary(bundleFixture, { fetchImpl: async url => {
     if (url.pathname === '/api/notes') return new Response('unexpected', { status: 200 });
     if (url.pathname === '/api/operations-status') throw new Error('unavailable');
     return fixtureResponse(url);
   } });
-  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 1); assert.equal(failing.blocked, 7);
+  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 3); assert.equal(failing.blocked, 7);
   assert.equal(failing.total, failing.blocked + failing.failed + failing.notRun);
   assert.throws(() => summarizeChecks([{ result: 'invented' }]), /invalid_check_results/u);
 });
@@ -247,10 +251,14 @@ test('summary API refuses mutations and arbitrary cases and exposes only a fresh
       assert.ok([400, 405].includes(res.code)); assert.equal(calls, 0);
     }
     const res = response(); await checkSummaryHandler({ method: 'GET' }, res);
-    assert.equal(res.code, 200); assert.equal(res.body.total, 9);
-    assert.equal(res.body.blocked, 9); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 0);
+    assert.equal(res.code, 200); assert.equal(res.body.total, 11);
+    assert.equal(res.body.blocked, 9); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 2);
     assert.equal(res.body.httpDenied, 5); assert.equal(res.body.fixedFixtureReady, 4);
-    assert.equal(res.body.attackAttempts.length, 9);
+    assert.equal(res.body.attackAttempts.length, 11);
+    assert.deepEqual(res.body.attempts, res.body.attackAttempts.map(({ source, ...row }) => row));
+    assert.ok(res.body.attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed,result,stage'));
+    assert.equal(res.body.recordSource, '학생 점검 코드(src/attack-check.mjs)');
+    assert.equal(res.body.sources.engine.name, 'ALEPH SDP 엔진');
     assert.equal(res.body.official.total, 41); assert.equal(res.body.official.notRun, 41);
     assert.equal(res.body.official.blocked, 0); assert.equal(res.body.official.failed, 0);
     assert.equal(calls, 17); assert.ok(!JSON.stringify(res.body).includes('public-fixture'));
@@ -330,7 +338,10 @@ test('fixed-case API computes only four fictional conditions and never accepts a
   for (const caseId of ['local_unregistered_device', 'local_compound_risk', 'local_unknown_route', 'local_detection_121']) {
     const res = response();
     await checkSummaryHandler({ method: 'GET', query: { case: caseId, subjectId: 'caller_claim', deviceRegistered: true } }, res);
-    assert.equal(res.code, 200); assert.equal(res.body.ready, true); assert.equal(res.body.source, 'fixed_fixture');
+    assert.equal(res.code, 200); assert.equal(res.body.ready, true); assert.equal(res.body.fixtureType, 'fixed_fixture');
+    assert.equal(res.body.caseId, caseId); assert.equal(res.body.engine, 'ALEPH SDP 엔진');
+    assert.equal(res.body.engineEnforced, 'not_run');
+    assert.equal(res.body.source, caseId === 'local_detection_121' ? '학생 탐지 규칙(src/detect.mjs)' : '학생 판정기(src/decider.mjs)');
     assert.ok(!JSON.stringify(res.body).includes('caller_claim'));
   }
   assert.equal(await runFixedRuleCheck('__proto__'), null); assert.equal(await runFixedRuleCheck('local_step_up_verified'), null);
@@ -350,15 +361,15 @@ test('fixed-case false or missing responses never become ready success or operat
   assert.equal(unavailable.observed, 'not_run'); assert.equal(unavailable.result, 'not_run');
   const summary = summarizeChecks(attempts, { plannedCases: matrix.cases });
   assert.equal(summary.httpDenied, 5); assert.equal(summary.fixedFixtureReady, 2);
-  assert.equal(summary.failed, 1); assert.equal(summary.notRun, 1); assert.equal(summary.official.notRun, 41);
+  assert.equal(summary.failed, 1); assert.equal(summary.notRun, 3); assert.equal(summary.official.notRun, 41);
 });
 
 test('official plan retains all operational unrun cases without a duplicate representative attempt', async () => {
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
   const replay = attempts.find(row => row.attackId === 'official_engine_replay');
-  assert.equal(replay, undefined); assert.equal(attempts.length, 9);
+  assert.equal(replay, undefined); assert.equal(attempts.length, 11);
   const summary = summarizeChecks(attempts, { plannedCases: matrix.cases });
-  assert.equal(summary.notRun, 0); assert.equal(summary.official.notRun, 41);
+  assert.equal(summary.notRun, 2); assert.equal(summary.official.notRun, 41);
   assert.equal(summary.provenance.engine, 'ALEPH SDP 엔진'); assert.equal(summary.provenance.operationalConnection, 'not_connected');
   assert.ok(summary.provenance.student.includes('고정 가상 규칙 시험'));
 });

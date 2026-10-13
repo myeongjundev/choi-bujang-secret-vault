@@ -19,3 +19,4 @@ if (!process.argv.includes('--local')) {
 if (config.step >= 3) await build({ entryPoints: [resolve(root, 'src/browser.mjs')], outfile: resolve(root, 'public/app.js'), bundle: true, format: 'esm', platform: 'browser', minify: true, sourcemap: false });
 if (config.step >= 11) await build({ entryPoints: [resolve(root, 'src/connect-browser.mjs')], outfile: resolve(root, 'public/connect.js'), bundle: true, format: 'esm', platform: 'browser', minify: true, sourcemap: false });
 if (config.step >= 12) await build({ entryPoints: [resolve(root, 'src/operations-browser.mjs')], outfile: resolve(root, 'public/operations.js'), bundle: true, format: 'esm', platform: 'browser', minify: true, sourcemap: false });
+if (config.step >= 12) await build({ entryPoints: [resolve(root, 'src/check-summary-browser.mjs')], outfile: resolve(root, 'public/check-summary.js'), bundle: true, format: 'esm', platform: 'browser', minify: true, sourcemap: false });

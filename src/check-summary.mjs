@@ -1,6 +1,7 @@
 // Same per-request results as the submission runner; no saved receipt or body.
 import { runBundleChecks } from './bundle-checks.mjs';
 import { normalizeCheckResults } from './check-results.mjs';
+import { SOURCES, SOURCE_OF } from './sources.mjs';
 
 export function summarizeChecks(attempts, { commit = null, checkedAt = new Date().toISOString(), plannedCases = [] } = {}) {
   attempts = normalizeCheckResults(attempts);
@@ -11,6 +12,8 @@ export function summarizeChecks(attempts, { commit = null, checkedAt = new Date(
     failed: attempts.filter(row => row.result === 'breached').length, notRun: attempts.filter(row => row.result === 'not_run').length,
     httpDenied: attempts.filter(row => row.result === 'blocked' && !row.attackId.startsWith('local_')).length,
     fixedFixtureReady: attempts.filter(row => row.result === 'blocked' && row.attackId.startsWith('local_')).length,
+    recordSource: SOURCE_OF.attackCheck, sources: SOURCES,
+    attempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result })),
     attackAttempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result,
       source: result === 'not_run' ? 'not_run' : attackId.startsWith('local_') ? 'fixed_fixture_http' : 'live_http' })),
     official: { total: officialCases.length, blocked: 0, failed: 0, notRun: officialCases.length, cases: officialCases },

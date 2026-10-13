@@ -8,6 +8,7 @@ public/aleph.json
 public/app.js
 public/connect.js
 public/operations.js
+public/check-summary.js
 xdr/alerts.log
 xdr/deny-rules.json
 xdr/replay-result.json

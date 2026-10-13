@@ -105,12 +105,18 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
     ].map(async ([id, expected]) => {
       const result = await request(`/api/checks?case=${id}`, id, { read: async response => {
         const value = await response.json();
-        if (typeof value?.ready !== 'boolean' || value.source !== 'fixed_fixture') throw new Error('invalid_fixed_fixture_response');
+        if (typeof value?.ready !== 'boolean' || (value.source !== 'fixed_fixture' && value.fixtureType !== 'fixed_fixture')) throw new Error('invalid_fixed_fixture_response');
         return value;
       } });
       return row(id, `${expected}; 운영 연결 증거 아님`, result, value => value.status === 200 && value.value.ready === true);
     }));
-    return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...fixedChecks];
+    // These specific write checks are intentionally not sent by the GET/HEAD runner.
+    // Retain them as unexecuted attempts, rather than inferring denial from a read.
+    const unexecutedWrites = [
+      { attackId: 'anonymous_restore', stage: 10, expected: 'POST /api/restore/:noteId 무인증 복원 거부; GET/HEAD 점검에서는 미실행', observed: 'not_run', result: 'not_run' },
+      { attackId: 'unsigned_note_write', stage: 11, expected: 'PUT /api/notes/:id 서명·승인 없는 수정 거부; GET/HEAD 점검에서는 미실행', observed: 'not_run', result: 'not_run' },
+    ];
+    return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...fixedChecks, ...unexecutedWrites];
   }
   const local = [];
   const decisionCase = async (id, patch, expected) => {
