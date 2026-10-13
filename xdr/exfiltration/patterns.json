@@ -1,0 +1,32 @@
+[
+  {
+    "name": "ex_unfamiliar_bulk", "minLevel": 10, "minBytes": 50000000, "minFiles": 100, "confidence": 0.96,
+    "condition": "높은 수준에서 낯선 목적지로 50,000,000바이트 이상·100건 이상 자료가 실제로 나간 관측이다.",
+    "evidence": "공식 가상 경보의 낯선 목적지·대량 자료 반출을 조합한다. T1041/T1048은 유출 분류 근거이며 크기·파일 수 임계값은 이 학습 정책이다.",
+    "sources": ["https://attack.mitre.org/techniques/T1041/", "https://attack.mitre.org/techniques/T1048/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/exfiltration.json"]
+  },
+  {
+    "name": "ex_unfamiliar_archive", "minLevel": 10, "minBytes": 50000000, "minFiles": 2, "confidence": 0.95,
+    "condition": "낯선 목적지로 대용량 압축 파일이 실제 반출됐고, 시간 밖 사용 또는 압축 파일 2건 이상이 함께 있다.",
+    "evidence": "공식 과제의 업무 시간 밖 압축 파일 반출·여러 압축 파일 관측과 T1048을 함께 기록한다. 압축 생성만으로는 유출이 아니다.",
+    "sources": ["https://attack.mitre.org/techniques/T1048/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/exfiltration.json"]
+  },
+  {
+    "name": "ex_repeated_transfer", "minLevel": 10, "minBytes": 50000000, "minCount": 5, "confidence": 0.94,
+    "condition": "5건 이상 대용량 실제 전송과 낯선 목적지·시간 밖·명령 통로·대용량 반복 관측이 함께 있다.",
+    "evidence": "공식 반복 전송 경보와 T1041/T1048을 근거로 삼는다. 반복 횟수만으로 평소 동기화를 차단하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1041/", "https://attack.mitre.org/techniques/T1048/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/exfiltration.json"]
+  },
+  {
+    "name": "ex_unusual_port", "minLevel": 10, "minBytes": 50000000, "minFiles": 20, "confidence": 0.95,
+    "condition": "평소 쓰지 않던 포트라는 관측과 실제 대용량·20건 이상 자료 전송이 함께 있다.",
+    "evidence": "공식 이례적 포트 경보와 T1048을 조합한다. 제공되지 않은 포트 번호나 프로토콜 이름은 만들어 넣지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1048/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/exfiltration.json"]
+  },
+  {
+    "name": "ex_full_copy", "minLevel": 10, "minBytes": 100000000, "minFiles": 100, "confidence": 0.96,
+    "condition": "짧은 시간에 자료실 전체가 외부로 실제 복사됐다는 관측과 100,000,000바이트 이상·100건 이상이 일치한다.",
+    "evidence": "공식 전체 자료 반출 경보와 T1041 분류를 기록한다. 이 가상 사건을 실제 유출 실증으로 확대하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1041/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/exfiltration.json"]
+  }
+]

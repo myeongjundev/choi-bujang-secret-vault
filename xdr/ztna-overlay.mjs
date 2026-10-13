@@ -14,7 +14,7 @@ export function ruleFor(alert, result, moduleKey) {
     reason: result.reason,
   };
 }
-export function activeDenial(rules, { sourceIp, sourceVerified, at, accountRef, accountVerified }) {
+export function activeDenial(rules, { sourceIp, sourceVerified, at, accountRef, accountVerified, destinationIp, destinationVerified }) {
   // sourceIp comes from a verified relay context, never a browser body/header.
   if (sourceVerified !== true || !isIP(String(sourceIp ?? ''))) return null;
   const now = Date.parse(at);
@@ -24,6 +24,9 @@ export function activeDenial(rules, { sourceIp, sourceVerified, at, accountRef, 
     // Account-scoped candidates must never degrade into an IP-wide denial.
     && (rule.accountRef === undefined || accountVerified === true
       && /^[a-f\d]{64}$/u.test(accountRef ?? '') && accountRef === rule.accountRef)
+    // Destination candidates must never degrade into denial of every flow.
+    && (rule.destinationIp === undefined || destinationVerified === true
+      && isIP(String(destinationIp ?? '')) && destinationIp === rule.destinationIp)
     && Date.parse(rule.issuedAt) <= now && now < Date.parse(rule.expiresAt)) ?? null;
 }
 export function withXdr(baseDecide, rules) {
