@@ -1,9 +1,14 @@
 const $ = id => document.getElementById(id);
-const text = value => value === null || value === undefined ? '미실행' : String(value);
+const text = value => value === null || value === undefined ? '—' : String(value);
+function cellText(row, field) {
+  if (field === 'status') return ({ passed: '기대 결과 일치', failed: '불일치', not_run: '미실행' })[row.status] ?? '미확인';
+  if (field === 'localOutcome' && row.source !== 'local_fixture') return '해당 없음';
+  return text(row[field]);
+}
 function table(id, rows, fields) {
   $(id).replaceChildren(...rows.map(row => {
     const tr = document.createElement('tr');
-    for (const field of fields) { const td = document.createElement('td'); td.textContent = text(row[field]); tr.append(td); }
+    for (const field of fields) { const td = document.createElement('td'); td.textContent = cellText(row, field); tr.append(td); }
     return tr;
   }));
 }

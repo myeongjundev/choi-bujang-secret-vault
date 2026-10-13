@@ -58,6 +58,13 @@ test('dashboard renders server observations and clears prior successes if a new 
   assert.ok(elements.get('counts').textContent.includes('7건 미실행'));
   assert.equal(elements.get('matrix').children.length, 41);
   assert.equal(elements.get('checks').children.length, 14);
+  const renderedRows = elements.get('checks').children.map(row => row.children.map(cell => cell.textContent));
+  const liveRows = renderedRows.filter(cells => cells[2] === 'live_http');
+  assert.equal(liveRows.length, 7);
+  assert.ok(liveRows.every(cells => !cells.includes('미실행') && cells[5] === '기대 결과 일치' && cells[8] === '해당 없음'));
+  assert.ok(renderedRows.filter(cells => cells[2] === 'local_fixture').every(cells => cells[5] === '미실행'));
+  assert.ok(elements.get('matrix').children.every(row => row.children[3].textContent === '미실행'
+    && row.children[4].textContent === '—' && row.children[5].textContent === '—'));
   unavailable = true; await elements.get('refresh').onclick();
   assert.equal(elements.get('checks').children.length, 0); assert.equal(elements.get('matrix').children.length, 0);
   assert.equal(elements.get('counts').textContent, '미확인');
