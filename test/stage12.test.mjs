@@ -177,10 +177,10 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
   assert.equal(attempts.filter(row => row.observed === 'not_run').length, 2);
   assert.equal(calls.length, 17); // auth-config precedes table read; four fixed-case HTTP calls
   assert.ok(!calls.some(row => row.path.startsWith('/api/restore/')));
-  for (const id of ['anonymous_create', 'anonymous_notice_put', 'malformed_restore']) {
+  for (const id of ['anonymous_create', 'anonymous_notice_put', 'anonymous_restore', 'malformed_restore']) {
     assert.ok(!attempts.some(row => row.attackId === id));
   }
-  for (const id of ['anonymous_restore', 'unsigned_note_write']) {
+  for (const id of ['s10-restore-unauth', 's11-unsigned-write']) {
     const attempt = attempts.find(row => row.attackId === id);
     assert.equal(attempt.observed, 'not_run'); assert.equal(attempt.result, 'not_run');
   }
