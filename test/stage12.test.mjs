@@ -27,7 +27,7 @@ test('dashboard counters come from actual calls; fake matrix status never become
   const out = await collectOperationsStatus(config, corruptedPlan(), { fetchImpl });
   assert.equal(urls.length, 7); assert.equal(out.counts.passed, 7); assert.equal(out.counts.failed, 0);
   assert.deepEqual(out.localCounts, { matched: 4, mismatched: 0 });
-  assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.result === 'not_run' && row.requestId === null));
+  assert.ok(!('officialEngineNotRun' in out.counts) && !('attackMatrix' in out));
   assert.equal(out.revocation.liveCount, null); assert.equal(out.detection.source, 'local_fixture'); assert.equal(out.recovery.verified, true);
   assert.equal(out.counts.notRun, 7);
   assert.ok(out.checks.filter(row => row.status !== 'not_run').every(row => row.requestId && row.checkedAt));
@@ -52,7 +52,6 @@ test('dashboard renders server observations and clears prior successes if a new 
     ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   const summary = summarizeChecks(await runAttackChecks(bundleFixture, { fetchImpl: fixtureResponse }), { plannedCases: matrix.cases });
-  observations.attackMatrix[0] = { ...observations.attackMatrix[0], status: 'passed', result: 'blocked' };
   const source = await readFile(new URL('../src/operations-browser.mjs', import.meta.url), 'utf8');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   await new AsyncFunction('document', 'fetch', source)(document, async path => {
@@ -64,7 +63,7 @@ test('dashboard renders server observations and clears prior successes if a new 
   assert.ok(elements.get('counts').textContent.includes('미실행 0건'));
   assert.ok(elements.get('local-counts').textContent.includes('로컬 가상 계산 4항목'));
   assert.ok(elements.get('engine-counts').textContent.includes('운영 미연결 3항목 · 미실행 3건'));
-  assert.equal(elements.get('matrix').children.length, 41);
+  assert.ok(!elements.has('matrix') && !elements.has('official-count'));
   assert.equal(elements.get('submission-checks').children.length, 12);
   assert.equal(elements.get('checks').children.length, 7);
   assert.equal(elements.get('local-checks').children.length, 4);
@@ -75,10 +74,8 @@ test('dashboard renders server observations and clears prior successes if a new 
   assert.ok(liveRows.every(cells => !cells.includes('미실행') && cells[5] === '기대 결과 일치'));
   assert.ok(elements.get('local-checks').children.every(row => row.children[3].textContent === '기대 조건 일치'));
   assert.ok(elements.get('engine-checks').children.every(row => row.children[4].textContent === '미실행'));
-  assert.ok(elements.get('matrix').children.every(row => row.children[3].textContent === '미실행'
-    && row.children[4].textContent === '—' && row.children[5].textContent === '—'));
   unavailable = true; await elements.get('refresh').onclick();
-  for (const id of ['submission-checks', 'checks', 'local-checks', 'engine-checks', 'matrix']) assert.equal(elements.get(id).children.length, 0);
+  for (const id of ['submission-checks', 'checks', 'local-checks', 'engine-checks']) assert.equal(elements.get(id).children.length, 0);
   assert.equal(elements.get('counts').textContent, '미확인');
   assert.ok(elements.get('status').textContent.includes('통과로 표시하지 않습니다'));
 });
@@ -97,7 +94,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
     if (url.pathname === '/api/checks') return Response.json(await runFixedRuleCheck(url.searchParams.get('case')));
     if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
     if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
-    if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 7, failed: 0, notRun: 7, officialEngineNotRun: 41 } });
+    if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 7, failed: 0, notRun: 7 } });
     const status = url.pathname === '/data.json' ? 404 : url.pathname.startsWith('/api/') || url.pathname.startsWith('/rest/') ? 401 : 200;
     return new Response('{}', { status });
   };
@@ -119,7 +116,7 @@ async function fixtureResponse(url) {
   if (url.pathname === '/api/auth-config') return Response.json({ url: 'https://fixture.supabase.co', publishableKey: 'public-fixture' });
   if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
   if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
-  if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 7, failed: 0, notRun: 7, officialEngineNotRun: 41 } });
+  if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 7, failed: 0, notRun: 7 } });
   return new Response('{}', { status: url.pathname === '/data.json' ? 404 : url.pathname.startsWith('/api/') || url.pathname.startsWith('/rest/') ? 401 : 200 });
 }
 
@@ -212,7 +209,7 @@ test('dashboard live counts equal HTTP rows while fixture successes remain a sep
   assert.equal(out.counts.passed, out.checks.filter(row => row.source === 'live_http' && row.status === 'passed').length);
   assert.equal(out.localCounts.matched, out.checks.filter(row => row.source === 'local_fixture' && row.localMatchesExpected === true).length);
   assert.equal(out.counts.passed, 7); assert.equal(out.localCounts.matched, 4);
-  assert.equal(out.counts.officialEngineNotRun, 41);
+  assert.ok(!('officialEngineNotRun' in out.counts) && !('attackMatrix' in out));
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
   assert.ok(!attempts.some(row => row.attackId === 'operations_observation'));
 });
@@ -273,7 +270,7 @@ test('unexecuted network cases and successful normal reads never inflate blocked
     ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   assert.ok(out.checks.filter(row => row.source === 'local_fixture').every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
-  assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.result === 'not_run' && row.requestId === null && row.checkedAt === null));
+  assert.ok(!('attackMatrix' in out));
   assert.ok(out.checks.filter(row => row.source === 'local_fixture').every(row => !('localStatus' in row) && typeof row.localMatchesExpected === 'boolean'));
 });
 

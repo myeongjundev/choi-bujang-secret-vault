@@ -16,8 +16,8 @@ function table(id, rows, fields) {
 }
 async function refresh() {
   function clear() {
-    for (const id of ['rules', 'detection', 'revocation', 'recovery', 'counts', 'local-counts', 'engine-counts', 'official-count', 'submission-counts']) $(id).textContent = '미확인';
-    for (const id of ['submission-checks', 'checks', 'local-checks', 'engine-checks', 'matrix']) $(id).replaceChildren();
+    for (const id of ['rules', 'detection', 'revocation', 'recovery', 'counts', 'local-counts', 'engine-counts', 'submission-counts']) $(id).textContent = '미확인';
+    for (const id of ['submission-checks', 'checks', 'local-checks', 'engine-checks']) $(id).replaceChildren();
   }
   clear();
   $('refresh').disabled = true; $('status').textContent = '서버에서 새 요청 결과를 관측합니다.';
@@ -25,7 +25,7 @@ async function refresh() {
     const response = await fetch('/api/operations-status', { cache: 'no-store' });
     if (!response.ok) throw new Error('unavailable');
     const data = await response.json();
-    if (data.schema !== 'vault.operations.v1' || !Array.isArray(data.checks) || !Array.isArray(data.attackMatrix)) throw new Error('invalid');
+    if (data.schema !== 'vault.operations.v1' || !Array.isArray(data.checks)) throw new Error('invalid');
     const summaryResponse = await fetch('/api/checks', { cache: 'no-store' });
     if (!summaryResponse.ok) throw new Error('checks_unavailable');
     const summary = await summaryResponse.json();
@@ -34,9 +34,6 @@ async function refresh() {
       || !Array.isArray(summary.attempts) || summary.attempts.length !== summary.total) throw new Error('invalid_summary');
     const submissionChecks = summary.attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result,
       source: result === 'not_run' ? 'not_run' : attackId.startsWith('local_') ? 'fixed_fixture_http' : 'live_http' }));
-    // The roster is a plan; claimed success in it cannot become an execution result.
-    const plannedChecks = data.attackMatrix.map(({ stage, name, expected }) => ({ stage, name, expected,
-      status: 'not_run', requestId: null, checkedAt: null }));
     const httpChecks = data.checks.filter(row => row.source === 'live_http');
     const localChecks = data.checks.filter(row => row.source === 'local_fixture');
     const engineChecks = data.checks.filter(row => row.source === 'official_engine_unconnected');
@@ -48,12 +45,10 @@ async function refresh() {
     $('counts').textContent = `보조 HTTP 관측 ${httpChecks.length}항목 · 기대 조건 일치 ${httpChecks.filter(row => row.status === 'passed').length}건 · 불일치 ${httpChecks.filter(row => row.status === 'failed').length}건 · 미실행 ${httpChecks.filter(row => row.status === 'not_run').length}건`;
     $('local-counts').textContent = `로컬 가상 계산 ${localChecks.length}항목 · 기대 조건 일치 ${localChecks.filter(row => row.localMatchesExpected === true).length}건 · 불일치 ${localChecks.filter(row => row.localMatchesExpected === false).length}건`;
     $('engine-counts').textContent = `운영 미연결 ${engineChecks.length}항목 · 미실행 ${engineChecks.filter(row => row.status === 'not_run').length}건`;
-    $('official-count').textContent = `공식 운영 계획 ${plannedChecks.length}항목 · 차단 0건 · 실패 0건 · 미실행 ${plannedChecks.length}건`;
     table('submission-checks', submissionChecks, ['stage', 'attackId', 'source', 'expected', 'observed', 'result']);
     table('checks', httpChecks, ['id', 'request', 'source', 'expected', 'observed', 'status', 'requestId', 'checkedAt']);
     table('local-checks', localChecks, ['id', 'expected', 'localOutcome', 'localMatchesExpected', 'localCheckedAt']);
     table('engine-checks', engineChecks, ['id', 'request', 'expected', 'observed', 'status', 'requestId', 'checkedAt']);
-    table('matrix', plannedChecks, ['stage', 'name', 'expected', 'status', 'requestId', 'checkedAt']);
     $('status').textContent = `실제 HTTP 응답 확인: ${data.checkedAt} · 배포 커밋 ${data.commit?.slice(0,12) ?? '미확인'} · 보조 관측 ID ${data.requestId}`;
   } catch { clear(); $('status').textContent = '서버 결과를 읽지 못했습니다. 시험을 통과로 표시하지 않습니다.'; }
   finally { $('refresh').disabled = false; }

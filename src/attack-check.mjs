@@ -114,7 +114,7 @@ async function runReadChecks(config, { fetchImpl = fetch, timeoutMs = 5000 } = {
   if (config.step >= 12) add('operations_observation', '/api/operations-status', '실제 관측·가상 시험·미실행 구분; 41종 미실행을 성공으로 세지 않음',
     { read: async response => {
       const value = await response.json();
-      if (value.schema !== 'vault.operations.v1' || !value.counts || ['passed', 'failed', 'notRun', 'officialEngineNotRun'].some(key => !Number.isInteger(value.counts[key]) || value.counts[key] < 0)) throw new Error('invalid_observation_response');
+      if (value.schema !== 'vault.operations.v1' || !value.counts || ['passed', 'failed', 'notRun'].some(key => !Number.isInteger(value.counts[key]) || value.counts[key] < 0)) throw new Error('invalid_observation_response');
       return value.counts;
     } }, value => value.status === 200);
 

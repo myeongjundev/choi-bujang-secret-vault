@@ -24,15 +24,14 @@
 | 목록 | 총 항목 | 기대 조건 일치 | 불일치 | 미실행 |
 | --- | ---: | ---: | ---: | ---: |
 | 제출 점검 | 12 | 10 | 0 | 2 |
-| 공식 운영 계획 | 41 | 0 | 0 | 41 |
 
-제출 점검의 실측 10건은 실제 HTTP 거부 6건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 4단계의 무인증 타인 메모 한 건 조회를 실제 GET으로 함께 점검한다. 복원 POST와 서명 없는 수정 PUT은 GET/HEAD 전용 제출 점검에서 보내지 않아 각각 observed와 result가 not_run이다. 운영 재현의 미실행은 별도 공식 계획 41행으로 기록한다. 별도 대표 실행 행은 만들지 않는다. 공식 운영 계획 41행은 status와 result가 모두 not_run이며 관측 ID·시각은 null이다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
+제출 점검의 실측 10건은 실제 HTTP 거부 6건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 4단계의 무인증 타인 메모 한 건 조회를 실제 GET으로 함께 점검한다. 복원 POST와 서명 없는 수정 PUT은 GET/HEAD 전용 제출 점검에서 보내지 않아 각각 observed와 result가 not_run이다. 공식 41종 전체는 심판이 보내며 학생 점검에서는 실행하지 않았다. 표에 없는 공격을 통과로 주장하지 않는다. 로컬 계획 파일은 미실행 상태로 보존하고 공개 실행 API와 표에는 넣지 않는다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
 
 학생 서버의 고정 가상 규칙은 정해진 가상 입력으로 판정기·탐지기를 실행한다. ready는 그 기대 조건의 일치 여부다. 제공 엔진의 실제 기기 승인과 회수는 미실행이다. 실제 점검의 실패 응답은 breached, 요청·응답을 받지 못한 항목은 not_run으로 기록한다.
 
 고정 가상 응답에는 caseId, 학생 구성 요소 source, engine(ALEPH SDP 엔진), engineEnforced(not_run)를 함께 표시한다. ready=true는 가상 조건 일치이며 엔진 집행 상태를 바꾸지 않는다. 요약의 sources와 recordSource는 이 출처를 표시하고 attempts는 제출과 같은 다섯 필드의 점검 행이다.
 
-제출 JSON은 공식 제출 계약의 attackAttempts 한 배열에 이번 점검만 기록한다. /api/checks는 같은 점검 함수의 새 HTTP 응답으로 네 수치를 계산하고 attempts 한 배열에 같은 다섯 필드 행을 둔다. 공식 계획은 이 실행 기록에 섞지 않고 /api/operations-status의 attackMatrix에서 별도로 읽는다. /operations.html은 제출 점검, 보조 HTTP 관측, 로컬 가상 계산, 운영 세션 대기, 공식 계획을 각각 다른 표로 표시한다. 숫자는 실행 시 응답에 따라 변한다.
+제출 JSON은 공식 제출 계약의 attackAttempts 한 배열에 이번 점검만 기록한다. /api/checks는 같은 점검 함수의 새 HTTP 응답으로 네 수치를 계산하고 attempts 한 배열에 같은 다섯 필드 행을 둔다. /operations.html은 제출 점검, 보조 HTTP 관측, 로컬 가상 계산, 운영 세션 대기를 각각 다른 표로 표시한다. 공식 41종 계획은 설명으로만 표시한다. 숫자는 실행 시 응답에 따라 변한다.
 
 src/attack-check.mjs는 import 없는 독립 점검 파일이다. 공개 URL 또는 설정 객체를 받아 실제 GET 관측만 기록한다. 환경파일·설정파일·판정기 모듈에 의존하지 않으며 판정기·탐지기의 고정 시험도 실제 /api/checks?case=… 응답을 읽는다. 원본 익명 읽기는 공개 인증 설정의 HTTPS 출처와 설정의 원본 주소를 대조한 뒤 수행한다.
 
@@ -51,6 +50,8 @@ src/attack-check.mjs는 import 없는 독립 점검 파일이다. 공개 URL 또
 
 npm run bundle의 자기 점검과 실제 심판 판정은 각각 확인한다. 새 접수는 그 시점의 저장소 HEAD를 고정한다. 공개 배포 /aleph.json의 커밋이 HEAD와 일치한 뒤 제출한다.
 
+사례별 실측 표는 새 제출 묶음을 만든 뒤 node scripts/checks-table.mjs로 확인한다. node scripts/checks-table.mjs --write-readme는 실제 측정 커밋·시각·점검 행만 아래 표시 구간에 기록한다. 이 문서 갱신은 별도 커밋하며 측정 커밋을 새 문서 커밋이라고 바꾸어 쓰지 않는다.
+
 ## 설정과 보호 경로
 
 aleph.config.json은 step 12이며 기존 judgeIssuer를 유지한다. identityProvider는 기존 Supabase Auth 발급자, authenticated 대상과 공식 JWKS 주소다. 허용한 notes 읽기 경로는 GET /api/my/notes, GET /api/notes/:id, 공식 판정 연습 GET /notes/:id다. 원본 Data API 직접 권한은 회수했다. 복원 경로는 /api/restore/:noteId다.
@@ -62,3 +63,33 @@ aleph.config.json은 step 12이며 기존 judgeIssuer를 유지한다. identityP
 ## 이전 기록과 계약
 
 [이전 저장점 원문](docs/SAVEPOINT-HISTORY.md)은 당시 구현과 점검 기록이다. 현재 집계에는 사용하지 않는다. 판정기의 실제 요청 계약은 docs/DECIDER_REQUEST.md, 탐지 사건 계약은 docs/DETECT_EVENTS.md, XDR 안내는 xdr/README.md를 읽는다. 기존 1~11단계와 XDR 여섯 과제의 실제 심판 기록은 작업 기록 저장소에 보존했다.
+
+
+<!-- checks-table:start -->
+
+## 이번 제출의 사례별 실측 기록
+
+점검 시각 2026-10-13T08:10:49.855Z · 커밋 f87c582b0298d7b8811dce6a89d3c759ccd78572 · 단계 12
+
+아래 표는 해당 커밋의 제출 묶음에 기록된 자기 점검 결과이며 심판 판정이 아닙니다. 고정 가상 규칙의 ready는 학생 계산의 기대 조건 일치이며 제공 엔진의 집행 결과가 아닙니다.
+
+| 단계 | 점검 ID | 기대 조건 | 실제 관측(observed) | 결과 |
+| --- | --- | --- | --- | --- |
+| 2 | static_seed | 404 | HTTP 404 | 막음(기대대로) |
+| 3 | anonymous_read | 401; 자료 없음 | HTTP 401 | 막음(기대대로) |
+| 3 | malformed_token | 401; 자료 없음 | HTTP 401 | 막음(기대대로) |
+| 4 | anonymous_other_note | 401; 타인 자료 없음 | HTTP 401 | 막음(기대대로) |
+| 5 | direct_anonymous_read | 원본 직접 접근 거부; 자료 없음 | HTTP 401 | 막음(기대대로) |
+| 6 | local_unregistered_device | fixed fixture unregistered deny; 운영 연결 증거 아님 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 7 | local_compound_risk | fixed fixture compound step_up; 운영 연결 증거 아님 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 8 | anonymous_notice_get | 401; 공지 본문 없음 | HTTP 401 | 막음(기대대로) |
+| 8 | local_unknown_route | fixed fixture unknown route deny; 운영 연결 증거 아님 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 9 | local_detection_121 | fixed fixture revocation proposal; 운영 연결 증거 아님 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 10 | s10-restore-unauth | POST /api/restore/:noteId 무인증 복원 거부; GET/HEAD 점검에서는 미실행 | not_run | 미실행 |
+| 11 | s11-unsigned-write | PUT /api/notes/:id 서명·승인 없는 수정 거부; GET/HEAD 점검에서는 미실행 | not_run | 미실행 |
+
+점검 항목 12 · 막음 10 · 뚫림 0 · 미실행 2
+
+공식 41종 전체는 심판의 별도 시험이며 이 자기 점검 표에 포함하지 않습니다. 별도 운영 재현 계획 41종은 모두 미실행(not_run)으로 둡니다. 이 표에 없는 공격을 통과로 세지 않습니다.
+
+<!-- checks-table:end -->
