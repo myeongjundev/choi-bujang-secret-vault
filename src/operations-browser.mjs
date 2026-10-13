@@ -31,7 +31,7 @@ async function refresh() {
     $('recovery').textContent = data.recovery.verified ? `사본 검증됨 · 버전 ${data.recovery.revision}` : '사본 검증 미확인';
     $('counts').textContent = `실제 HTTP ${data.counts.passed}건 일치 · ${data.counts.failed}건 불일치 · ${data.counts.notRun}건 미실행. 로컬 가상 시험 ${data.localCounts?.passed ?? 0}건 일치 · ${data.localCounts?.failed ?? 0}건 불일치`;
     $('official-count').textContent = `공식 엔진 41종 재현 시험 ${data.counts.officialEngineNotRun}건 미실행`;
-    table('checks', data.checks, ['id', 'request', 'source', 'expected', 'observed', 'status', 'requestId', 'checkedAt']);
+    table('checks', data.checks, ['id', 'request', 'source', 'expected', 'observed', 'status', 'requestId', 'checkedAt', 'localOutcome']);
     table('matrix', data.attackMatrix, ['stage', 'name', 'expected', 'status', 'requestId', 'checkedAt']);
     $('status').textContent = `서버 응답 확인: ${data.checkedAt} · 배포 커밋 ${data.commit?.slice(0,12) ?? '미확인'} · 관측 ID ${data.requestId}`;
   } catch { clear(); $('status').textContent = '서버 결과를 읽지 못했습니다. 시험을 통과로 표시하지 않습니다.'; }

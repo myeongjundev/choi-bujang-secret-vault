@@ -122,5 +122,8 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
     const out = detect(events);
     local.push({ attackId: `local_detection_${count}`, stage: 9, expected: `${count === 120 ? 'observe' : 'propose_revocation'}; 운영 회수 증거 아님`, observed: 'not_run', result: 'not_run' });
   }
-  return [...results, ...local];
+  // Successful public/health reads are observations, not blocked attacks.
+  // Keep their failures/unavailability visible; never inflate a defense count.
+  const attackIds = new Set(['anonymous_read', 'malformed_token', 'static_seed', 'direct_anonymous_read', 'anonymous_notice_get']);
+  return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...local];
 }

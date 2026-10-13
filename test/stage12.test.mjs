@@ -20,7 +20,7 @@ test('dashboard counters come from actual calls; fake matrix status never become
   assert.deepEqual(out.localCounts, { passed: 4, failed: 0 });
   assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null));
   assert.equal(out.revocation.liveCount, null); assert.equal(out.detection.source, 'local_fixture'); assert.equal(out.recovery.verified, true);
-  assert.equal(out.counts.notRun, 3);
+  assert.equal(out.counts.notRun, 7);
   assert.ok(out.checks.filter(row => row.status !== 'not_run').every(row => row.requestId && row.checkedAt));
   assert.ok(out.checks.filter(row => row.source === 'official_engine_unconnected').every(row => row.requestId === null && row.checkedAt === null));
 });
@@ -29,7 +29,7 @@ test('unreachable and unexpectedly open APIs remain not_run/failed; no private b
   const fetchImpl = async url => { if (url.pathname === '/api/recovery-plan') throw new Error('private details');
     return new Response('private note text must never be retained', { status: 200 }); };
   const out = await collectOperationsStatus(config, matrix, { fetchImpl });
-  assert.equal(out.counts.failed, 5); assert.equal(out.counts.notRun, 4);
+  assert.equal(out.counts.failed, 5); assert.equal(out.counts.notRun, 8);
   assert.equal(out.recovery.verified, false); assert.ok(!JSON.stringify(out).includes('private note text'));
   assert.ok(!JSON.stringify(out).includes('private details'));
 });
@@ -46,12 +46,12 @@ test('dashboard renders server observations and clears prior successes if a new 
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   await new AsyncFunction('document', 'fetch', source)(document, async path => {
     if (unavailable) throw new Error('network down');
-    if (path === '/api/checks') return Response.json({ schema: 'vault.checks.v1', total: 16, blocked: 12, failed: 0, notRun: 4 });
+    if (path === '/api/checks') return Response.json({ schema: 'vault.checks.v1', total: 9, blocked: 5, failed: 0, notRun: 4 });
     return Response.json(observations);
   });
   assert.ok(elements.get('counts').textContent.includes('실제 HTTP 7건 일치'));
   assert.ok(elements.get('counts').textContent.includes('로컬 가상 시험 4건 일치'));
-  assert.ok(elements.get('counts').textContent.includes('3건 미실행'));
+  assert.ok(elements.get('counts').textContent.includes('7건 미실행'));
   assert.equal(elements.get('matrix').children.length, 41);
   assert.equal(elements.get('checks').children.length, 14);
   unavailable = true; await elements.get('refresh').onclick();
@@ -79,7 +79,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
   };
   try {
     const attempts = await runAttackChecks(configuration);
-    assert.equal(attempts.length, 16);
+    assert.equal(attempts.length, 9);
     assert.ok(attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed,result,stage'));
     for (const row of attempts.filter(row => !row.attackId.startsWith('local_'))) {
       assert.equal(calls.filter(call => call.options.alephEvidence.caseId === row.attackId).length, 1);
@@ -103,7 +103,7 @@ test('one unavailable dashboard does not abort other bundle observations or beco
     if (url.pathname === '/api/operations-status') throw new Error('private error must not be retained');
     return fixtureResponse(url);
   } });
-  assert.equal(attempts.length, 16);
+  assert.equal(attempts.length, 10);
   assert.equal(attempts.find(row => row.attackId === 'anonymous_read').observed, 'HTTP 401');
   assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run');
   assert.equal(attempts.filter(row => row.observed === 'not_run').length, 5);
@@ -137,7 +137,7 @@ test('R5 config input and public-example URL input execute identical observation
     : fixtureResponse(url) };
   const fromConfig = await runAttackChecks(repositoryConfig, options);
   const fromUrl = await runAttackChecks(repositoryConfig.publicAppUrl, options);
-  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 16);
+  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 9);
   await assert.rejects(runAttackChecks('http://fixture.local', options), /invalid_observation_origin/u);
 });
 
@@ -148,7 +148,7 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
     calls.push({ path: url.pathname, method: options.method });
     return fixtureResponse(url);
   } });
-  assert.equal(attempts.length, 16);
+  assert.equal(attempts.length, 9);
   assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
   assert.equal(calls.length, 13); // auth-config precedes the direct table read
   assert.ok(!calls.some(row => row.path.startsWith('/api/restore/')));
@@ -156,7 +156,7 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
     assert.ok(!attempts.some(row => row.attackId === id));
   }
   assert.ok(attempts.some(row => row.attackId === 'anonymous_read' && row.observed === 'HTTP 401'));
-  assert.ok(attempts.some(row => row.attackId === 'backup_verification' && row.observed === 'HTTP 200'));
+  assert.ok(!attempts.some(row => row.attackId === 'backup_verification'));
 });
 
 test('bundle claims only recorded HTTP statuses and marks non-network fixtures not_run', async () => {
@@ -179,11 +179,11 @@ test('dashboard live counts equal HTTP rows while fixture successes remain a sep
     ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   assert.equal(out.counts.passed, out.checks.filter(row => row.source === 'live_http' && row.status === 'passed').length);
-  assert.equal(out.localCounts.passed, out.checks.filter(row => row.source === 'local_fixture' && row.status === 'passed').length);
+  assert.equal(out.localCounts.passed, out.checks.filter(row => row.source === 'local_fixture' && row.localStatus === 'passed').length);
   assert.equal(out.counts.passed, 7); assert.equal(out.localCounts.passed, 4);
   assert.equal(out.counts.officialEngineNotRun, 41);
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
-  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'HTTP 200');
+  assert.ok(!attempts.some(row => row.attackId === 'operations_observation'));
 });
 
 test('submission results and fresh screen summary use the same real responses, including failure and unavailable cases', async () => {
@@ -191,14 +191,14 @@ test('submission results and fresh screen summary use the same real responses, i
   const attempts = await runAttackChecks(bundleFixture, options);
   const summary = await collectCheckSummary(bundleFixture, options);
   assert.deepEqual({ total: summary.total, blocked: summary.blocked, failed: summary.failed, notRun: summary.notRun },
-    { total: 16, blocked: 12, failed: 0, notRun: 4 });
+    { total: 9, blocked: 5, failed: 0, notRun: 4 });
   assert.deepEqual(summarizeChecks(attempts, { commit: summary.commit, checkedAt: summary.checkedAt }), summary);
   const failing = await collectCheckSummary(bundleFixture, { fetchImpl: async url => {
     if (url.pathname === '/api/notes') return new Response('unexpected', { status: 200 });
     if (url.pathname === '/api/operations-status') throw new Error('unavailable');
     return fixtureResponse(url);
   } });
-  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 5); assert.equal(failing.blocked, 9);
+  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 5); assert.equal(failing.blocked, 3);
   assert.equal(failing.total, failing.blocked + failing.failed + failing.notRun);
   assert.throws(() => summarizeChecks([{ result: 'invented' }]), /invalid_check_results/u);
 });
@@ -220,8 +220,21 @@ test('summary API refuses mutations and arbitrary cases and exposes only a fresh
       assert.ok([400, 405].includes(res.code)); assert.equal(calls, 0);
     }
     const res = response(); await checkSummaryHandler({ method: 'GET' }, res);
-    assert.equal(res.code, 200); assert.equal(res.body.total, 16);
-    assert.equal(res.body.blocked, 12); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 4);
+    assert.equal(res.code, 200); assert.equal(res.body.total, 9);
+    assert.equal(res.body.blocked, 5); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 4);
     assert.equal(calls, 13); assert.ok(!JSON.stringify(res.body).includes('public-fixture'));
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test('unexecuted network cases and successful normal reads never inflate blocked attack totals', async () => {
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
+  const blocked = attempts.filter(row => row.result === 'blocked');
+  assert.equal(blocked.length, 5);
+  assert.ok(blocked.every(row => /^HTTP (401|403|404)$/u.test(row.observed)));
+  assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed === 'not_run' && row.result === 'not_run'));
+  const out = await collectOperationsStatus(config, matrix, { fetchImpl: async url => url.pathname === '/api/recovery-plan'
+    ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
+    : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
+  assert.ok(out.checks.filter(row => row.source === 'local_fixture').every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
+  assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
 });
