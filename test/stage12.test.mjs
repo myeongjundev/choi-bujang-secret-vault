@@ -8,6 +8,7 @@ import checkSummaryHandler from '../api/checks.mjs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runFixedRuleCheck } from '../src/fixed-rule-check.mjs';
+import { normalizeCheckResults } from '../src/check-results.mjs';
 const config = { publicAppUrl: 'https://fixture.local' };
 const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
 
@@ -282,17 +283,22 @@ test('bundle builds official unrun evidence under the judge Git-command allowlis
     throw new Error('unexpected_file_read');
   };
   const importer = async url => String(url).endsWith('decider.mjs') ? { RULE_IDS: ['device_registered'] }
-    : { runAttackChecks: async () => [{ attackId: 'anonymous_read', stage: 3, expected: 'HTTP 401', observed: 'HTTP 401', result: 'blocked' }] };
+    : { runAttackChecks: async () => [
+      { attackId: 'anonymous_read', stage: 3, expected: 'HTTP 401', observed: 'HTTP 401', result: 'blocked' },
+      { attackId: 'unrun_claim', stage: 12, expected: 'deny', observed: 'not_run', result: 'blocked' },
+      { attackId: 'unavailable_claim', stage: 12, expected: 'deny', observed: 'network_error', result: 'breached' },
+    ] };
   const fakeProcess = { env: {}, stdout: { write() {} }, stderr: { write(value) { errors.push(value); } } };
   const executable = source.replace(/^import .*;\r?\n/gmu, '').replaceAll('import.meta.dirname', 'scriptDirectory').replaceAll('await import(', 'await importer(');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   await new AsyncFunction('execFileSync', 'mkdirSync', 'readFileSync', 'writeFileSync', 'join', 'resolve', 'pathToFileURL',
-    'scriptDirectory', 'importer', 'process', executable)(execFileSync, () => {}, readFileSync,
-    (_path, value) => writes.push(JSON.parse(value)), join, resolve, pathToFileURL, resolve('scripts'), importer, fakeProcess);
+    'scriptDirectory', 'importer', 'process', 'normalizeCheckResults', executable)(execFileSync, () => {}, readFileSync,
+    (_path, value) => writes.push(JSON.parse(value)), join, resolve, pathToFileURL, resolve('scripts'), importer, fakeProcess, normalizeCheckResults);
   assert.deepEqual(errors, []); assert.equal(fakeProcess.exitCode, undefined); assert.equal(writes.length, 1);
   assert.equal(writes[0].officialAttackMatrix.length, 41);
   assert.ok(writes[0].officialAttackMatrix.every(row => row.result === 'not_run' && row.requestId === null && row.checkedAt === null));
-  assert.deepEqual(writes[0].counts, { total: 1, blocked: 1, failed: 0, notRun: 0 });
+  assert.deepEqual(writes[0].counts, { total: 3, blocked: 1, failed: 0, notRun: 2 });
+  assert.ok(writes[0].attackAttempts.slice(1).every(row => row.result === 'not_run' && row.observed === 'not_run'));
   assert.deepEqual(writes[0].officialCounts, { total: 41, blocked: 0, failed: 0, notRun: 41 });
   assert.equal(writes[0].provenance.engine, 'ALEPH SDP 엔진');
   assert.equal(writes[0].provenance.operationalConnection, 'not_connected');
@@ -335,4 +341,24 @@ test('submission explicitly retains unavailable operational replay and distingui
   assert.equal(summary.notRun, 1); assert.equal(summary.official.notRun, 41);
   assert.equal(summary.provenance.engine, 'ALEPH SDP 엔진'); assert.equal(summary.provenance.operationalConnection, 'not_connected');
   assert.ok(summary.provenance.student.includes('고정 가상 규칙 시험'));
+});
+
+test('unavailable observations override inconsistent outcome claims in every summary without changing input', () => {
+  const attempts = [
+    { attackId: 'actual_denial', stage: 3, expected: 'deny', observed: 'HTTP 401', result: 'blocked' },
+    { attackId: 'unrun_claim', stage: 12, expected: 'deny', observed: 'not_run', result: 'blocked' },
+    { attackId: 'network_error_claim', stage: 12, expected: 'deny', observed: 'network_error', result: 'breached' },
+    { attackId: 'no_http_claim', stage: 12, expected: 'deny', observed: 'unavailable', result: 'blocked' },
+  ];
+  const original = structuredClone(attempts);
+  const summary = summarizeChecks(attempts, { plannedCases: matrix.cases });
+  assert.deepEqual({ total: summary.total, blocked: summary.blocked, failed: summary.failed, notRun: summary.notRun },
+    { total: 4, blocked: 1, failed: 0, notRun: 3 });
+  assert.deepEqual(attempts, original);
+  assert.ok(summary.attackAttempts.slice(1).every(row => row.result === 'not_run' && row.observed === 'not_run' && row.source === 'not_run'));
+  assert.equal(summary.httpDenied, 1); assert.equal(summary.fixedFixtureReady, 0);
+  assert.equal(summary.official.blocked, 0); assert.equal(summary.official.notRun, 41);
+  const legacy = [{ attackId: 'legacy_read', expected: 'HTTP 401', observed: 'HTTP 401' }];
+  assert.deepEqual(normalizeCheckResults(legacy, { allowLegacy: true }), legacy);
+  assert.throws(() => normalizeCheckResults(legacy), /invalid_check_results/u);
 });
