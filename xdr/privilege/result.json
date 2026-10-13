@@ -1,0 +1,167 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "privilege",
+  "decisions": [
+    {
+      "alertId": "pv-01",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "pv_admin_group: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-02",
+      "action": "block",
+      "confidence": 0.94,
+      "reason": "pv_recent_admin_use: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-03",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "pv_unusual_admin_use: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-04",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "pv_admin_group: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-05",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "pv_admin_group: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-06",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "pv_unusual_admin_use: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-07",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "pv_admin_group: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-08",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "pv_unusual_admin_use: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-09",
+      "action": "block",
+      "confidence": 0.93,
+      "reason": "pv_admin_reentry: corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-10",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-11",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-12",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-13",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-14",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-15",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-16",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-17",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "pv_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "pv-18",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-19",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-20",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-21",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-22",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-23",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-24",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-25",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    },
+    {
+      "alertId": "pv-26",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "pv_normal: no corroborated privilege misuse"
+    }
+  ],
+  "counts": {
+    "block": 9,
+    "alert": 8,
+    "record": 9
+  }
+}

@@ -1,4 +1,6 @@
-# XDR-01 / XDR-02 / XDR-03 / XDR-04 보너스 모듈
+# XDR-01 / XDR-02 / XDR-03 / XDR-04 / XDR-05 보너스 모듈
+
+2026-10-13 XDR-05 privilege를 추가했다. 공식 원본 26건은 최신 origin/main 2cd777b452525b95e29f12f2c76d9190a594ec23과도 파일 차이 없음. 현재 다섯 fixtures를 보존하며 자료 빼돌리기는 미착수다. 독립 순수 판정의 근거는 T1068·T1078과 관리자 그룹 변경/권한 사용의 복합 관측이다. 응답은 block만 계정 가명 참조·근거 경보·15분 만료를 가진 규칙으로 저장한다. 실제 운영 세션 회수는 미연결이다.
 
 2026-10-13 XDR-04 persistence를 추가했다. 원본은 공식 persistence.json 24건이며 최신 origin/main 2cd777b452525b95e29f12f2c76d9190a594ec23과 이 파일 차이가 없다. 아래 XDR-03 시점 이후 네 번째 fixture를 추가했고 나머지 두 보너스는 미착수다. 순수 독립 decide.mjs와 patterns.json 동기화를 시험한다. respond.mjs는 block만 기존 만료형 overlay로 연결하며 알림 로그에는 정적 패턴 이름만 기록한다.
 
@@ -11,6 +13,7 @@ npm run xdr:run -- brute-force
 npm run xdr:run -- web-injection
 npm run xdr:run -- known-cve
 npm run xdr:run -- persistence
+npm run xdr:run -- privilege
 npm run xdr:test
 npm run xdr:replay
 ```
@@ -31,9 +34,13 @@ scripts/xdr-run.mjs는 block 후보만 xdr/deny-rules.json에 기록하며 alert
 
 xdr/ztna-overlay.mjs의 withXdr(baseDecide, rules)는 유효한 거부 후보가 일치할 때만 거부하고, 나머지는 기존 baseDecide에 그대로 위임한다. 확인되지 않은 sourceIp는 차단 근거로 사용하지 않는다. 브라우저가 제출한 IP나 X-Forwarded-For를 신뢰하는 연결은 만들지 않았다.
 
+XDR-05의 accountRef가 있는 후보는 추가로 accountVerified=true·계정 SHA-256 참조 일치를 요구한다. 공통 overlay도 이 조건을 요구해 후보가 IP 전체 거부로 바뀌지 않는다. 같은 IP의 다른 계정·미확인 계정·클라이언트 요청 내 계정 주장은 후보와 일치하지 않는다. 이는 가상 확인 컨텍스트 시험이며 제공 엔진의 실제 계정/주체/세션 매핑 계약이 아니다. 기존 IP-only 후보에는 이 조건을 강요하지 않아 앞선 모듈 동작을 보존한다.
+
 현재 docs/DECIDER_REQUEST.md의 18개 요청 필드에는 확인된 원본 IP가 없고 signals.source도 실경로에서는 none이다. 따라서 운영 엔진의 출발 주소 공급 계약과 xdr_blocked 이유 코드 등록 전에는 실제 ZTNA 경로에 연결됐다고 말하지 않는다. 6단계에서 src/decider.mjs에 기기 등록·자료실 읽기 정책을 추가했지만 XDR overlay는 아직 운영 경로에 연결하지 않았다. 모듈 시험의 정상 통과는 허용하는 시험용 기본 정책에 대한 결과이며 실제 기기 연결이나 운영 사용자 허용 증거가 아니다.
 
 ## 관찰한 로컬 결과
+
+- privilege: block 9, alert 8, record 9. 읽기 26줄. 모의 연결 공격 deny 9·정상/애매한/같은 IP 다른 계정 deny 0, 미확인 계정/IP·만료·기존 거부·다른 모듈 규칙/로그 보존 확인. 최신 npm test 전체 63개 통과. 재생·계정 결합은 test/privilege.test.mjs에서 검증한다.
 
 - persistence: block 8, alert 8, record 8. 안전한 읽기 24줄. 높은 수준과 서비스/예약 작업/시작 항목의 복합 근거를 함께 사용한다. 미확인 서명은 unsigned로 간주하지 않는다. 모의 연결 공격 deny 8·정상/애매한 deny 0·기존 거부/만료/다른 모듈 규칙 보존·중복 로그 방지 확인. 최신 npm test 전체 56개 통과. 이 모듈의 연결 재생은 test/persistence.test.mjs에서 검증한다.
 

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "pv_admin_group", "minLevel": 10, "confidence": 0.96,
+    "condition": "높은 수준의 관리자 그룹 편입과 원격 출처, 이어진 명령 실행 또는 4건 이상 반복 편입이 함께 관측된다. 일반 그룹은 제외한다.",
+    "evidence": "공식 privilege 경보의 계정/관리자 그룹 변경과 복합 사용 신호. T1078은 정상 계정 악용 분류이며 관리자라는 이름만으로 악의성을 보장하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1078/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/privilege.json"]
+  },
+  {
+    "name": "pv_recent_admin_use", "minLevel": 10, "confidence": 0.94,
+    "condition": "높은 수준에서 방금 관리자가 된 계정이 관리자 명령을 성공적으로 실행하는 관측이 있다.",
+    "evidence": "공식 경보의 최근 권한 상승과 관리자 명령 사용을 함께 검사한다. T1068은 권한 상승 악용 분류이며 이 경보만으로 구체적 취약점 실행을 증명하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1068/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/privilege.json"]
+  },
+  {
+    "name": "pv_unusual_admin_use", "minLevel": 10, "confidence": 0.95,
+    "condition": "높은 수준에서 낯선 주소와 시간 밖 관리자 명령, 낯선 주소의 세션 권한 변화 또는 다른 계정의 관리자 권한 사용이 관측된다.",
+    "evidence": "공식 과제의 낯선 관리자 사용·업무 시간 밖 신호를 조합한다. T1068/T1078은 분류 근거이며 개별 시간 또는 위치만으로 차단하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1068/", "https://attack.mitre.org/techniques/T1078/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/privilege.json"]
+  },
+  {
+    "name": "pv_admin_reentry", "minLevel": 10, "confidence": 0.93,
+    "condition": "관리자 그룹에서 빠진 계정이 수분 내 재편입된 높은 수준의 경보이며 관리자 그룹과 반복 건수가 일치한다.",
+    "evidence": "공식 경보의 권한 회수 후 빠른 재편입은 일반 그룹 변경과 구분되는 복합 관측이다. T1078 분류와 함께 근거를 기록한다.",
+    "sources": ["https://attack.mitre.org/techniques/T1078/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/privilege.json"]
+  }
+]
