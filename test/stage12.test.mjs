@@ -222,6 +222,9 @@ test('summary API refuses mutations and arbitrary cases and exposes only a fresh
     const res = response(); await checkSummaryHandler({ method: 'GET' }, res);
     assert.equal(res.code, 200); assert.equal(res.body.total, 9);
     assert.equal(res.body.blocked, 5); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 4);
+    assert.equal(res.body.attackAttempts.length, 9);
+    assert.equal(res.body.official.total, 41); assert.equal(res.body.official.notRun, 41);
+    assert.equal(res.body.official.blocked, 0); assert.equal(res.body.official.failed, 0);
     assert.equal(calls, 13); assert.ok(!JSON.stringify(res.body).includes('public-fixture'));
   } finally { globalThis.fetch = originalFetch; }
 });
@@ -237,4 +240,14 @@ test('unexecuted network cases and successful normal reads never inflate blocked
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   assert.ok(out.checks.filter(row => row.source === 'local_fixture').every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
   assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
+});
+
+test('summary exposes per-case unrun evidence and never promotes a planned case to blocked', async () => {
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
+  const summary = summarizeChecks(attempts, { plannedCases: matrix.cases });
+  assert.equal(summary.blocked, summary.attackAttempts.filter(row => row.result === 'blocked').length);
+  assert.equal(summary.notRun, summary.attackAttempts.filter(row => row.result === 'not_run').length);
+  assert.equal(summary.official.total, 41); assert.equal(summary.official.blocked, 0);
+  assert.equal(summary.official.notRun, summary.official.cases.filter(row => row.result === 'not_run').length);
+  assert.ok(summary.official.cases.every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
 });

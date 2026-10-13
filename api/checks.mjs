@@ -7,6 +7,7 @@ export default async function handler(req, res) {
   if (req.query?.case !== undefined) return res.status(400).json({ error: 'unsupported_check' });
   try {
     const config = JSON.parse(readFileSync(new URL('../aleph.config.json', import.meta.url), 'utf8'));
-    return res.status(200).json(await collectCheckSummary(config, { commit: process.env.VERCEL_GIT_COMMIT_SHA }));
+    const matrix = JSON.parse(readFileSync(new URL('../data/attack-matrix.json', import.meta.url), 'utf8'));
+    return res.status(200).json(await collectCheckSummary(config, { commit: process.env.VERCEL_GIT_COMMIT_SHA, plannedCases: matrix.cases }));
   } catch { return res.status(503).json({ error: 'checks_unavailable' }); }
 }

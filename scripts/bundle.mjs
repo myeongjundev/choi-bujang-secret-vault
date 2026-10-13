@@ -89,10 +89,13 @@ try {
   if (new Set(attackAttempts.map(item => item.attackId)).size !== attackAttempts.length) {
     fail('공격 점검 ID가 중복되었습니다.');
   }
+  const officialAttackMatrix = config.step === 12 ? fromCommit('data/attack-matrix.json').cases.map(({ id, stage, name, expected }) => ({
+    id, stage, name, expected, status: 'not_run', result: 'not_run', source: 'official_engine_unconnected', requestId: null, checkedAt: null,
+  })) : [];
   const bundle = {
     schema: 'aleph.defense.submission.v2', step: config.step, commit, repoUrl, checkedAt: new Date().toISOString(),
     changedFiles, policyRules,
-    attackAttempts, explanation: notes.explanation.trim(), blockedAt: notes.blockedAt ?? null,
+    attackAttempts, officialAttackMatrix, explanation: notes.explanation.trim(), blockedAt: notes.blockedAt ?? null,
     identityProvider: config.identityProvider ?? null, allowedRoutes: config.allowedRoutes ?? [],
     originalApiUrl: config.originalApiUrl ?? null, restoreRoute: config.restoreRoute ?? null,
   };
