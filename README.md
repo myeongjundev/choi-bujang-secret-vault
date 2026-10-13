@@ -23,14 +23,14 @@
 
 | 목록 | 총 항목 | 기대 조건 일치 | 불일치 | 미실행 |
 | --- | ---: | ---: | ---: | ---: |
-| 제출 점검 | 10 | 9 | 0 | 1 |
+| 제출 점검 | 9 | 9 | 0 | 0 |
 | 공식 운영 계획 | 41 | 0 | 0 | 41 |
 
-제출 점검의 실측 9건은 실제 HTTP 거부 5건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 운영 재현 official_engine_replay 1건은 실행 세션이 없어 observed/result 모두 not_run이다. 공식 운영 계획 41행은 status와 result가 모두 not_run이며 관측 ID·시각은 null이다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
+제출 점검의 실측 9건은 실제 HTTP 거부 5건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 운영 재현의 미실행은 공식 계획 41행으로 기록한다. 별도 대표 실행 행은 만들지 않는다. 공식 운영 계획 41행은 status와 result가 모두 not_run이며 관측 ID·시각은 null이다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
 
 학생 서버의 고정 가상 규칙은 정해진 가상 입력으로 판정기·탐지기를 실행한다. ready는 그 기대 조건의 일치 여부다. 제공 엔진의 실제 기기 승인과 회수는 미실행이다. 실제 점검의 실패 응답은 breached, 요청·응답을 받지 못한 항목은 not_run으로 기록한다.
 
-제출 JSON의 counts는 제출 점검만 센다. officialCounts는 공식 운영 계획만 센다. /api/checks는 같은 점검 함수의 새 HTTP 응답으로 수치를 계산하며 공식 목록은 별도 official에 둔다. /operations.html은 이 API 수치와 사례별 결과를 표시한다. 일반 HTTP 관측, 로컬 가상 계산, 공식 운영 계획의 상태를 각각 표시한다. 숫자는 실행 시 응답에 따라 변한다.
+제출 JSON의 counts는 제출 점검만 센다. officialCounts는 공식 운영 계획만 센다. /api/checks는 같은 점검 함수의 새 HTTP 응답으로 수치를 계산하며 공식 목록은 별도 official에 둔다. /operations.html의 제출 사례와 공식 계획 표는 이 요약 API의 같은 응답에서 읽는다. 별도 보조 HTTP 관측, 로컬 가상 계산, 운영 세션 대기를 각각 다른 표와 집계로 표시한다. 숫자는 실행 시 응답에 따라 변한다.
 
 집계는 실제 관측을 우선한다. observed가 not_run이거나 HTTP 응답 관측이 없는 항목은 result도 not_run으로 정규화한다. 들어온 결과 라벨이 blocked여도 미실행 관측은 미실행 집계와 출처에 남긴다. 실제 HTTP 상태와 가상 규칙의 ready는 새 응답에서 읽는다.
 

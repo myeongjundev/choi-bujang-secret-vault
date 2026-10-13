@@ -110,9 +110,7 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
       } });
       return row(id, `${expected}; 운영 연결 증거 아님`, result, value => value.status === 200 && value.value.ready === true);
     }));
-    return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...fixedChecks,
-      { attackId: 'official_engine_replay', stage: 12, expected: 'ALEPH SDP 엔진의 운영 시험 세션으로 공식 계획 재현',
-        observed: 'not_run', result: 'not_run' }];
+    return [...results.filter(result => attackIds.has(result.attackId) || result.result !== 'blocked'), ...fixedChecks];
   }
   const local = [];
   const decisionCase = async (id, patch, expected) => {
