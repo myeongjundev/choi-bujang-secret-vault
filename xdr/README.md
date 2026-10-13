@@ -1,4 +1,6 @@
-# XDR-01 / XDR-02 / XDR-03 보너스 모듈
+# XDR-01 / XDR-02 / XDR-03 / XDR-04 보너스 모듈
+
+2026-10-13 XDR-04 persistence를 추가했다. 원본은 공식 persistence.json 24건이며 최신 origin/main 2cd777b452525b95e29f12f2c76d9190a594ec23과 이 파일 차이가 없다. 아래 XDR-03 시점 이후 네 번째 fixture를 추가했고 나머지 두 보너스는 미착수다. 순수 독립 decide.mjs와 patterns.json 동기화를 시험한다. respond.mjs는 block만 기존 만료형 overlay로 연결하며 알림 로그에는 정적 패턴 이름만 기록한다.
 
 자료 출처: https://github.com/ChoiTimo/aleph-defense-starter 의 main 커밋 8a0927400ec0d0a8ff08146db773fec80fb6d216. 세 fixtures는 원본 그대로 복사했다. 2026-10-13 known-cve는 최신 origin/main 2cd777b452525b95e29f12f2c76d9190a594ec23과 파일 차이 없음도 확인했다. 모든 주소는 문서용 대역이며 계정과 경보는 가상이다. 나머지 세 보너스의 시험 자료는 이번 작업에 포함하지 않았다.
 
@@ -8,6 +10,7 @@
 npm run xdr:run -- brute-force
 npm run xdr:run -- web-injection
 npm run xdr:run -- known-cve
+npm run xdr:run -- persistence
 npm run xdr:test
 npm run xdr:replay
 ```
@@ -31,6 +34,8 @@ xdr/ztna-overlay.mjs의 withXdr(baseDecide, rules)는 유효한 거부 후보가
 현재 docs/DECIDER_REQUEST.md의 18개 요청 필드에는 확인된 원본 IP가 없고 signals.source도 실경로에서는 none이다. 따라서 운영 엔진의 출발 주소 공급 계약과 xdr_blocked 이유 코드 등록 전에는 실제 ZTNA 경로에 연결됐다고 말하지 않는다. 6단계에서 src/decider.mjs에 기기 등록·자료실 읽기 정책을 추가했지만 XDR overlay는 아직 운영 경로에 연결하지 않았다. 모듈 시험의 정상 통과는 허용하는 시험용 기본 정책에 대한 결과이며 실제 기기 연결이나 운영 사용자 허용 증거가 아니다.
 
 ## 관찰한 로컬 결과
+
+- persistence: block 8, alert 8, record 8. 안전한 읽기 24줄. 높은 수준과 서비스/예약 작업/시작 항목의 복합 근거를 함께 사용한다. 미확인 서명은 unsigned로 간주하지 않는다. 모의 연결 공격 deny 8·정상/애매한 deny 0·기존 거부/만료/다른 모듈 규칙 보존·중복 로그 방지 확인. 최신 npm test 전체 56개 통과. 이 모듈의 연결 재생은 test/persistence.test.mjs에서 검증한다.
 
 - brute-force: block 10, alert 9, record 9.
 - web-injection: block 8, alert 9, record 9.

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "ps_unsigned_service", "minLevel": 10, "confidence": 0.96,
+    "condition": "수준 10 이상, 서명 부재가 확인된 서비스 등록/실행 파일 변경과 임시 실행 파일 또는 3건 이상 반복 등록이 함께 있다. 서명 미확인은 부재가 아니다.",
+    "evidence": "MITRE T1543은 시스템 서비스 생성·변경을 통한 지속 실행을 설명한다. 공식 가상 경보의 서명 부재·임시 경로·반복은 이 학습 정책의 복합 근거다.",
+    "sources": ["https://attack.mitre.org/techniques/T1543/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/persistence.json"]
+  },
+  {
+    "name": "ps_unfamiliar_service", "minLevel": 10, "confidence": 0.94,
+    "condition": "수준 10 이상, 기준 목록 밖 서비스가 등록되고 임시 실행 파일을 가리킨다.",
+    "evidence": "T1543 서비스 등록과 공식 경보의 기준 목록 밖 등록·임시 실행 파일을 함께 검사한다. 이름만으로 차단하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1543/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/persistence.json"]
+  },
+  {
+    "name": "ps_scheduled_task", "minLevel": 10, "confidence": 0.94,
+    "condition": "수준 10 이상, 낯선/임의 이름/시간 밖 예약 작업 또는 시작 항목 동시 연결이 임시 실행 파일을 가리킨다.",
+    "evidence": "MITRE T1053은 예약 작업의 반복 실행 악용을 설명한다. 공식 경보의 낯선 작업·임시 경로가 복합 근거이며 수업 예약 하나만으로 차단하지 않는다.",
+    "sources": ["https://attack.mitre.org/techniques/T1053/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/persistence.json"]
+  },
+  {
+    "name": "ps_startup_change", "minLevel": 10, "confidence": 0.93,
+    "condition": "수준 10 이상, 기준 목록 밖 시작 프로그램 추가와 Startup 폴더의 실행 파일 경로가 함께 있다.",
+    "evidence": "공식 과제는 시작 폴더 변경을 포함한다. MITRE T1547.001은 Startup 폴더의 자동 실행을 설명하며 T1543과 별도 분류다.",
+    "sources": ["https://attack.mitre.org/techniques/T1547/001/", "https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/persistence.json"]
+  }
+]

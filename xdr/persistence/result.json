@@ -1,0 +1,155 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "persistence",
+  "decisions": [
+    {
+      "alertId": "ps-01",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "ps_unsigned_service: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-02",
+      "action": "block",
+      "confidence": 0.94,
+      "reason": "ps_scheduled_task: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-03",
+      "action": "block",
+      "confidence": 0.93,
+      "reason": "ps_startup_change: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-04",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "ps_unsigned_service: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-05",
+      "action": "block",
+      "confidence": 0.94,
+      "reason": "ps_scheduled_task: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-06",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "ps_unsigned_service: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-07",
+      "action": "block",
+      "confidence": 0.94,
+      "reason": "ps_scheduled_task: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-08",
+      "action": "block",
+      "confidence": 0.94,
+      "reason": "ps_unfamiliar_service: corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-09",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-10",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-11",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-12",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-13",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-14",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-15",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-16",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "ps_unconfirmed: incomplete evidence; alert only"
+    },
+    {
+      "alertId": "ps-17",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-18",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-19",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-20",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-21",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-22",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-23",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    },
+    {
+      "alertId": "ps-24",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "ps_normal: no corroborated persistence evidence"
+    }
+  ],
+  "counts": {
+    "block": 8,
+    "alert": 8,
+    "record": 8
+  }
+}
