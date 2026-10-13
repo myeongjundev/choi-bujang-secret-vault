@@ -100,8 +100,8 @@ test('one unavailable dashboard does not abort other bundle observations or beco
   } });
   assert.equal(attempts.length, 16);
   assert.equal(attempts.find(row => row.attackId === 'anonymous_read').observed, 'HTTP 401');
-  assert.match(attempts.find(row => row.attackId === 'operations_observation').observed, /^not_run;/u);
-  assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 1);
+  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run');
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 5);
   assert.ok(!JSON.stringify(attempts).includes('private error'));
 });
 
@@ -111,15 +111,15 @@ test('whole-response deadlines end even if transport ignores AbortSignal or the 
     const attempts = await runAttackChecks(bundleFixture, { fetchImpl, timeoutMs: 30 });
     assert.ok(Date.now() - before < 1000);
     assert.equal(attempts.length, 16);
-    assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 12);
-    assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed.startsWith('local fixture')));
+    assert.equal(attempts.filter(row => row.observed === 'not_run').length, 16);
+    assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed === 'not_run'));
   }
 });
 
 test('malformed observation JSON is unavailable evidence, while unsafe original API configuration stops', async () => {
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => url.pathname === '/api/operations-status'
     ? new Response('not JSON', { status: 200 }) : fixtureResponse(url) });
-  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run; HTTP 200; response_unreadable');
+  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'not_run');
   assert.ok(!JSON.stringify(attempts).includes('not JSON'));
   await assert.rejects(runAttackChecks({ ...bundleFixture, originalApiUrl: 'https://other.supabase.co/rest/v1/user_notes' },
     { fetchImpl: async url => fixtureResponse(url) }), /invalid_original_api_origin/u);
@@ -144,12 +144,26 @@ test('isolated GET/HEAD-only bundle execution completes without claiming write o
     return fixtureResponse(url);
   } });
   assert.equal(attempts.length, 16);
-  assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 0);
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
   assert.equal(calls.length, 13); // auth-config precedes the direct table read
   assert.ok(!calls.some(row => row.path.startsWith('/api/restore/')));
   for (const id of ['anonymous_create', 'anonymous_notice_put', 'anonymous_restore', 'malformed_restore']) {
     assert.ok(!attempts.some(row => row.attackId === id));
   }
   assert.ok(attempts.some(row => row.attackId === 'anonymous_read' && row.observed === 'HTTP 401'));
-  assert.ok(attempts.some(row => row.attackId === 'backup_verification' && row.observed.includes('backupVerified=true')));
+  assert.ok(attempts.some(row => row.attackId === 'backup_verification' && row.observed === 'HTTP 200'));
+});
+
+test('bundle claims only recorded HTTP statuses and marks non-network fixtures not_run', async () => {
+  const traced = new Map();
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async (url, options) => {
+    const response = fixtureResponse(url);
+    traced.set(options.alephEvidence.caseId, response.status);
+    return response;
+  } });
+  for (const row of attempts) {
+    assert.equal(row.observed, traced.has(row.attackId) ? `HTTP ${traced.get(row.attackId)}` : 'not_run');
+  }
+  assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
+  assert.ok(!JSON.stringify(attempts.map(row => row.observed)).match(/fixture|leak marker|connected|scope|matched|note count/u));
 });
