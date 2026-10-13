@@ -1,0 +1,26 @@
+[
+  {
+    "name": "kc_remote_lookup",
+    "condition": "요청 머리글·주소·인자에 완전한 JNDI 원격 조회 구문이 있다. 설명·CVE 이름·수준만으로 차단하지 않는다.",
+    "regex": "\\$\\{\\s*jndi\\s*:\\s*(?:ldap|ldaps|rmi)\\s*://[^\\s{}]+\\}",
+    "confidence": 0.96,
+    "evidence": "Apache CVE-2021-44228: 사용자 입력에 포함된 JNDI 원격 조회가 취약한 log4j-core에서 실행될 수 있다. MITRE T1190은 외부 노출 앱 취약점 악용 분류다.",
+    "sources": ["https://logging.apache.org/security.html#CVE-2021-44228", "https://attack.mitre.org/techniques/T1190/"]
+  },
+  {
+    "name": "kc_cve_reference",
+    "condition": "CVE-2021-44228·Log4Shell·JNDI 이름이나 잘린 조회 흔적이 있으나 완전한 원격 조회 형태가 없다. alert만 반환한다.",
+    "regex": "CVE-2021-44228|Log4Shell|\\bjndi\\b",
+    "confidence": 0.6,
+    "evidence": "공식 known-cve 경보는 취약점 이름·수업 단어와 완전한 악용 구문을 구분한다. 이름만으로 실행 또는 악용을 입증하지 못한다.",
+    "sources": ["https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/known-cve.json"]
+  },
+  {
+    "name": "kc_scanner_trace",
+    "condition": "취약점 점검·스캐너 흔적만 있는 요청은 alert로 남기고 거부 규칙을 만들지 않는다.",
+    "regex": "취약점.{0,20}점검|점검\\s*도구|vulnerability\\s*(?:scan|check)|log4j.{0,12}(?:scan|check)",
+    "confidence": 0.55,
+    "evidence": "공식 known-cve의 점검 흔적은 수업용 프로그램과 혼동될 수 있어 단독 차단 근거가 아니다. T1190은 분류이며 행위의 악의성을 보증하지 않는다.",
+    "sources": ["https://github.com/ChoiTimo/aleph-defense-starter/blob/main/xdr/fixtures/known-cve.json", "https://attack.mitre.org/techniques/T1190/"]
+  }
+]

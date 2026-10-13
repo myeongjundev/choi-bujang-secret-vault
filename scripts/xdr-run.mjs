@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { publishDecisions } from '../xdr/ztna-overlay.mjs';
+import { respond as respondKnownCve } from '../xdr/known-cve/respond.mjs';
 
 const MODULE_KEYS = ['brute-force', 'web-injection', 'known-cve', 'persistence', 'privilege', 'exfiltration'];
 const ACTIONS = new Set(['block', 'alert', 'record']);
@@ -66,7 +67,8 @@ if (isMain) {
     const moduleKey = process.argv[2];
     const result = await runXdr({ root, moduleKey });
     const fixture = JSON.parse(await readFile(join(root, 'xdr', 'fixtures', `${moduleKey}.json`), 'utf8'));
-    await publishDecisions(root, fixture, result);
+    if (moduleKey === 'known-cve') await respondKnownCve(root, fixture, result);
+    else await publishDecisions(root, fixture, result);
     console.log(`${moduleKey}: block ${result.counts.block}, alert ${result.counts.alert}, record ${result.counts.record}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : '실행 오류');

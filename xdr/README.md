@@ -1,17 +1,18 @@
-# XDR-01 / XDR-02 보너스 모듈
+# XDR-01 / XDR-02 / XDR-03 보너스 모듈
 
-자료 출처: https://github.com/ChoiTimo/aleph-defense-starter 의 main 커밋 8a0927400ec0d0a8ff08146db773fec80fb6d216. 두 fixtures는 원본 그대로 복사했다. 모든 주소는 문서용 대역이며 계정과 경보는 가상이다. 다른 네 보너스의 시험 자료는 이번 작업에 포함하지 않았다.
+자료 출처: https://github.com/ChoiTimo/aleph-defense-starter 의 main 커밋 8a0927400ec0d0a8ff08146db773fec80fb6d216. 세 fixtures는 원본 그대로 복사했다. 2026-10-13 known-cve는 최신 origin/main 2cd777b452525b95e29f12f2c76d9190a594ec23과 파일 차이 없음도 확인했다. 모든 주소는 문서용 대역이며 계정과 경보는 가상이다. 나머지 세 보너스의 시험 자료는 이번 작업에 포함하지 않았다.
 
 ## 실행
 
 ```
 npm run xdr:run -- brute-force
 npm run xdr:run -- web-injection
+npm run xdr:run -- known-cve
 npm run xdr:test
 npm run xdr:replay
 ```
 
-제출용 decide.mjs는 npm run xdr:build로 decide-source.mjs와 patterns.json에서 생성한 단일 ES 모듈이다. 저장소의 다른 파일·Node 전용 모듈을 import하지 않아 파일 하나만 전달되는 격리 환경에서도 실행된다. 시험은 data: URL로 모듈을 독립 실행하고 모든 원본 경보의 결과가 로컬 실행과 일치하는지 확인한다. 실제 Jev를 연결할 호스트는 사용하는 decide.mjs의 setJevReviewer를 호출해야 하며, 설정하지 않으면 알림 fallback이다.
+XDR-01/02 제출용 decide.mjs는 npm run xdr:build로 decide-source.mjs와 patterns.json에서 생성한 단일 ES 모듈이다. 저장소의 다른 파일·Node 전용 모듈을 import하지 않아 파일 하나만 전달되는 격리 환경에서도 실행된다. 시험은 data: URL로 모듈을 독립 실행하고 모든 원본 경보의 결과가 로컬 실행과 일치하는지 확인한다. 실제 Jev를 연결할 호스트는 사용하는 decide.mjs의 setJevReviewer를 호출해야 하며, 설정하지 않으면 알림 fallback이다. XDR-03은 patterns.json과 동기화를 시험하는 상수를 decide.mjs에 직접 두며, 외부 reviewer 없이 순수 계산한다.
 
 각 result.json은 공식 aleph.xdr.result.v1 계약을 따른다. 실행기는 실제 decide(alert)를 다시 호출하므로 저장된 결과를 정답으로 읽지 않는다. 경보 ID·계정·주소·정답 순서를 기준으로 행동을 하드코딩하지 않는다. read-alerts.mjs는 경보 수만큼 시각·출발 주소·가명 계정·수준·비밀값을 지운 설명의 다섯 필드를 반환한다. 알림 로그에는 설명 원문·계정·키·URL을 쓰지 않는다.
 
@@ -33,5 +34,7 @@ xdr/ztna-overlay.mjs의 withXdr(baseDecide, rules)는 유효한 거부 후보가
 
 - brute-force: block 10, alert 9, record 9.
 - web-injection: block 8, alert 9, record 9.
+- known-cve: block 8, alert 8, record 8. 읽기 24줄, 정상 차단 0. respond.mjs가 실행기에 연결돼 block만 기존 만료형 overlay로 저장하며 로그에는 패턴 이름만 남긴다. 같은 경보 재실행 시 중복하지 않는다.
+- known-cve 모의 연결: 공격 8건 거부, 정상·애매한 거부 0, 확인되지 않은 IP·만료 규칙은 기본 정책에 위임. 기존 거부 정책도 보존한다. npm test 전체 50개 통과. 기존 npm run xdr:replay는 첫 두 모듈용이고 known-cve 연결 재생은 test/known-cve.test.mjs에서 검증한다.
 - 모의 overlay: 공격 18건 거부, 정상 거부 0, 애매한 경보 거부 0, 모든 관련 규칙 만료 후 거부 0.
 - XDR 회귀시험은 독립 실행을 포함해 6개이며 통과했다. 2026-10-07 두 보너스 운영 심판 성공 및 합산 180/600점을 확인했다. 6단계 변경 뒤 기존 자료실·XDR·기기 정책 시험 총 17개가 통과했다.
