@@ -89,7 +89,7 @@ try {
   if (new Set(attackAttempts.map(item => item.attackId)).size !== attackAttempts.length) {
     fail('공격 점검 ID가 중복되었습니다.');
   }
-  const officialAttackMatrix = config.step === 12 ? fromCommit('data/attack-matrix.json').cases.map(({ id, stage, name, expected }) => ({
+  const officialAttackMatrix = config.step === 12 ? JSON.parse(readFileSync(join(root, 'data', 'attack-matrix.json'), 'utf8')).cases.map(({ id, stage, name, expected }) => ({
     id, stage, name, expected, status: 'not_run', result: 'not_run', source: 'official_engine_unconnected', requestId: null, checkedAt: null,
   })) : [];
   const bundle = {

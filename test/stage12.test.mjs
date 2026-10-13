@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 import { runAttackChecks } from '../src/attack-check.mjs';
 import { collectCheckSummary, summarizeChecks } from '../src/check-summary.mjs';
 import checkSummaryHandler from '../api/checks.mjs';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 const config = { publicAppUrl: 'https://fixture.local' };
 const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
 
@@ -250,4 +252,39 @@ test('summary exposes per-case unrun evidence and never promotes a planned case 
   assert.equal(summary.official.total, 41); assert.equal(summary.official.blocked, 0);
   assert.equal(summary.official.notRun, summary.official.cases.filter(row => row.result === 'not_run').length);
   assert.ok(summary.official.cases.every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
+});
+
+test('bundle builds official unrun evidence under the judge Git-command allowlist without extra Git reads', async () => {
+  const source = await readFile(new URL('../scripts/bundle.mjs', import.meta.url), 'utf8');
+  const repository = 'https://github.com/fixture/defense';
+  const calls = [], writes = [], errors = [];
+  const execFileSync = (command, argv) => {
+    assert.equal(command, 'git');
+    const args = argv.slice(2); calls.push(args);
+    if (args[0] === 'status') return '';
+    if (args[0] === 'rev-parse') return 'a'.repeat(40);
+    if (args[0] === 'config' || args.join(' ') === 'remote get-url origin') return repository;
+    if (args[0] === 'diff-tree') return 'scripts/bundle.mjs\n';
+    if (args.join(' ') === 'show HEAD:aleph.config.json') return JSON.stringify({ step: 12, repoUrl: repository,
+      publicAppUrl: 'https://fixture.local', identityProvider: { issuer: 'fixture', audience: 'fixture', jwksUrl: 'https://fixture.local/keys' },
+      originalApiUrl: 'https://fixture.supabase.co/rest/v1/user_notes', allowedRoutes: [{ service: 'notes', method: 'GET', pathPattern: '/api/my/notes' }] });
+    throw new Error('sandbox_disallowed_git_read');
+  };
+  const readFileSync = path => {
+    if (String(path).endsWith('bundle-notes.json')) return JSON.stringify({ explanation: 'Executed bounded public checks, with unavailable cases separate.' });
+    if (String(path).endsWith('attack-matrix.json')) return JSON.stringify(matrix);
+    throw new Error('unexpected_file_read');
+  };
+  const importer = async url => String(url).endsWith('decider.mjs') ? { RULE_IDS: ['device_registered'] }
+    : { runAttackChecks: async () => [{ attackId: 'anonymous_read', stage: 3, expected: 'HTTP 401', observed: 'HTTP 401', result: 'blocked' }] };
+  const fakeProcess = { env: {}, stdout: { write() {} }, stderr: { write(value) { errors.push(value); } } };
+  const executable = source.replace(/^import .*;\r?\n/gmu, '').replaceAll('import.meta.dirname', 'scriptDirectory').replaceAll('await import(', 'await importer(');
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  await new AsyncFunction('execFileSync', 'mkdirSync', 'readFileSync', 'writeFileSync', 'join', 'resolve', 'pathToFileURL',
+    'scriptDirectory', 'importer', 'process', executable)(execFileSync, () => {}, readFileSync,
+    (_path, value) => writes.push(JSON.parse(value)), join, resolve, pathToFileURL, resolve('scripts'), importer, fakeProcess);
+  assert.deepEqual(errors, []); assert.equal(fakeProcess.exitCode, undefined); assert.equal(writes.length, 1);
+  assert.equal(writes[0].officialAttackMatrix.length, 41);
+  assert.ok(writes[0].officialAttackMatrix.every(row => row.result === 'not_run' && row.requestId === null && row.checkedAt === null));
+  assert.equal(calls.filter(args => args[0] === 'show').length, 1);
 });

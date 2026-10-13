@@ -1,5 +1,9 @@
 # BYTE BACK 자료실 · 12단계 저장점
 
+## 12단계 허용 Git 읽기 범위 보완 · 2026-10-13
+
+15번째판정은추가git show HEAD:data/attack-matrix.json을허용하지않아묶음실행이종료됐습니다. 공개계획은파일로읽고기존커밋전작업트리검사·설정Git읽기만유지합니다. 격리의Git허용목록을강제한시험에서실제묶음코드가공식41행not_run을만드는지검증했습니다. 재현npm test(전체78개), 커밋후npm run check. 이전미실행구별조건의해결효과는재판정으로확인합니다.
+
 ## 12단계 사례별 미실행 근거 · 2026-10-13
 
 설명만바꾼대조도S12_UNRUN_COUNTED가남아숫자뿐아니라사례별상태를대조할수있게했다. /api/checks는실제제출점검의각attackId/observed/result와별도official계획41건을반환한다. 실제점검은9/5/0/4이고공식계획은41/0/0/41이다. 계획에는not_run과null관측ID/시각만넣으며입력의passed표시를받지않는다. 제출묶음에도동일한officialAttackMatrix를실측attackAttempts와분리해보존한다. 기존API/DB/정책은그대로다. 재현npm test(전체77개), 커밋후npm run check. 게임심판효과는별도확인한다.
