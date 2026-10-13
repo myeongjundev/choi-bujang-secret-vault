@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { runFixedRuleCheck } from '../src/fixed-rule-check.mjs';
 import { normalizeCheckResults } from '../src/check-results.mjs';
 const config = { publicAppUrl: 'https://fixture.local' };
-const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
+const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed', result: 'blocked' })) };
 
 test('dashboard counters come from actual calls; fake matrix status never becomes execution evidence', async () => {
   const urls = [];
@@ -21,8 +21,8 @@ test('dashboard counters come from actual calls; fake matrix status never become
     return new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }); };
   const out = await collectOperationsStatus(config, matrix, { fetchImpl });
   assert.equal(urls.length, 7); assert.equal(out.counts.passed, 7); assert.equal(out.counts.failed, 0);
-  assert.deepEqual(out.localCounts, { passed: 4, failed: 0 });
-  assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null));
+  assert.deepEqual(out.localCounts, { matched: 4, mismatched: 0 });
+  assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.result === 'not_run' && row.requestId === null));
   assert.equal(out.revocation.liveCount, null); assert.equal(out.detection.source, 'local_fixture'); assert.equal(out.recovery.verified, true);
   assert.equal(out.counts.notRun, 7);
   assert.ok(out.checks.filter(row => row.status !== 'not_run').every(row => row.requestId && row.checkedAt));
@@ -187,8 +187,8 @@ test('dashboard live counts equal HTTP rows while fixture successes remain a sep
     ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   assert.equal(out.counts.passed, out.checks.filter(row => row.source === 'live_http' && row.status === 'passed').length);
-  assert.equal(out.localCounts.passed, out.checks.filter(row => row.source === 'local_fixture' && row.localStatus === 'passed').length);
-  assert.equal(out.counts.passed, 7); assert.equal(out.localCounts.passed, 4);
+  assert.equal(out.localCounts.matched, out.checks.filter(row => row.source === 'local_fixture' && row.localMatchesExpected === true).length);
+  assert.equal(out.counts.passed, 7); assert.equal(out.localCounts.matched, 4);
   assert.equal(out.counts.officialEngineNotRun, 41);
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
   assert.ok(!attempts.some(row => row.attackId === 'operations_observation'));
@@ -248,7 +248,8 @@ test('unexecuted network cases and successful normal reads never inflate blocked
     ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   assert.ok(out.checks.filter(row => row.source === 'local_fixture').every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
-  assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null && row.checkedAt === null));
+  assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.result === 'not_run' && row.requestId === null && row.checkedAt === null));
+  assert.ok(out.checks.filter(row => row.source === 'local_fixture').every(row => !('localStatus' in row) && typeof row.localMatchesExpected === 'boolean'));
 });
 
 test('summary exposes per-case unrun evidence and never promotes a planned case to blocked', async () => {

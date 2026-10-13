@@ -22,7 +22,7 @@
 | 제출 점검 | 10 | 9 | 0 | 1 |
 | 공식 운영 계획 | 41 | 0 | 0 | 41 |
 
-제출 점검의 실측 9건은 실제 HTTP 거부 5건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 운영 재현 official_engine_replay 1건은 실행 세션이 없어 observed/result 모두 not_run이다. 공식 운영 계획 41행은 전부 not_run이며 관측 ID·시각은 null이다.
+제출 점검의 실측 9건은 실제 HTTP 거부 5건과 학생 서버의 고정 가상 규칙 ready 응답 4건이다. 운영 재현 official_engine_replay 1건은 실행 세션이 없어 observed/result 모두 not_run이다. 공식 운영 계획 41행은 status와 result가 모두 not_run이며 관측 ID·시각은 null이다. 로컬 가상 계산의 기대 조건 일치는 localMatchesExpected 불리언과 별도 matched/mismatched 수치로 기록한다.
 
 학생 서버의 고정 가상 규칙은 정해진 가상 입력으로 판정기·탐지기를 실행한다. ready는 그 기대 조건의 일치 여부다. 제공 엔진의 실제 기기 승인과 회수는 미실행이다. 실제 점검의 실패 응답은 breached, 요청·응답을 받지 못한 항목은 not_run으로 기록한다.
 
