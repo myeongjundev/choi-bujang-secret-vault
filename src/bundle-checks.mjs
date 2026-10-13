@@ -27,7 +27,7 @@ async function observe(url, { fetchImpl, timeoutMs, method = 'GET', headers = {}
 // Semantic checks remain local/API evidence, never invented network facts.
 const notRun = () => 'not_run';
 const row = (attackId, expected, result, format = value => `HTTP ${value.status}`) => ({ attackId, expected,
-  observed: result.ran ? `HTTP ${result.status}` : notRun(result) });
+  observed: result.ran ? `HTTP ${result.status}${attackId === 'operations_observation' ? '; jsonReady=true' : ''}` : notRun(result) });
 
 export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5000 } = {}) {
   const app = new URL(config.publicAppUrl);

@@ -52,8 +52,11 @@ export async function collectOperationsStatus(config, matrix, { fetchImpl = fetc
     status: 'not_run', requestId: null, checkedAt: null });
   return { schema: 'vault.operations.v1', commit: /^[a-f\d]{40}$/u.test(commit ?? '') ? commit : null, requestId: randomUUID(), checkedAt: new Date().toISOString(),
     source: 'student_server_observation', policyRules: [...RULE_IDS], checks,
-    counts: { passed: checks.filter(row => row.status === 'passed').length, failed: checks.filter(row => row.status === 'failed').length,
+    counts: { passed: checks.filter(row => row.source === 'live_http' && row.status === 'passed').length,
+      failed: checks.filter(row => row.source === 'live_http' && row.status === 'failed').length,
       notRun: checks.filter(row => row.status === 'not_run').length, officialEngineNotRun: attackMatrix.length },
+    localCounts: { passed: checks.filter(row => row.source === 'local_fixture' && row.status === 'passed').length,
+      failed: checks.filter(row => row.source === 'local_fixture' && row.status === 'failed').length },
     detection: { action: detection.action, reasonCode: detection.reasonCode, source: 'local_fixture' },
     revocation: { status: 'not_connected', liveCount: null }, recovery, attackMatrix,
     provenance: { student: ['policy', 'detection', 'UI', 'notes API', 'backup verification and restore'],

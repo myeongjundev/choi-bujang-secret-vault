@@ -14,7 +14,8 @@ test('dashboard counters come from actual calls; fake matrix status never become
     if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 });
     return new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }); };
   const out = await collectOperationsStatus(config, matrix, { fetchImpl });
-  assert.equal(urls.length, 7); assert.equal(out.counts.passed, 11); assert.equal(out.counts.failed, 0);
+  assert.equal(urls.length, 7); assert.equal(out.counts.passed, 7); assert.equal(out.counts.failed, 0);
+  assert.deepEqual(out.localCounts, { passed: 4, failed: 0 });
   assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.requestId === null));
   assert.equal(out.revocation.liveCount, null); assert.equal(out.detection.source, 'local_fixture'); assert.equal(out.recovery.verified, true);
   assert.equal(out.counts.notRun, 3);
@@ -45,7 +46,8 @@ test('dashboard renders server observations and clears prior successes if a new 
     if (unavailable) throw new Error('network down');
     return Response.json(observations);
   });
-  assert.ok(elements.get('counts').textContent.includes('11건 일치'));
+  assert.ok(elements.get('counts').textContent.includes('실제 HTTP 7건 일치'));
+  assert.ok(elements.get('counts').textContent.includes('로컬 가상 시험 4건 일치'));
   assert.ok(elements.get('counts').textContent.includes('3건 미실행'));
   assert.equal(elements.get('matrix').children.length, 41);
   assert.equal(elements.get('checks').children.length, 14);
@@ -162,8 +164,21 @@ test('bundle claims only recorded HTTP statuses and marks non-network fixtures n
     return response;
   } });
   for (const row of attempts) {
-    assert.equal(row.observed, traced.has(row.attackId) ? `HTTP ${traced.get(row.attackId)}` : 'not_run');
+    assert.equal(row.observed, traced.has(row.attackId)
+      ? `HTTP ${traced.get(row.attackId)}${row.attackId === 'operations_observation' ? '; jsonReady=true' : ''}` : 'not_run');
   }
   assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
   assert.ok(!JSON.stringify(attempts.map(row => row.observed)).match(/fixture|leak marker|connected|scope|matched|note count/u));
+});
+
+test('dashboard live counts equal HTTP rows while fixture successes remain a separate source', async () => {
+  const out = await collectOperationsStatus(config, matrix, { fetchImpl: async url => url.pathname === '/api/recovery-plan'
+    ? Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 })
+    : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
+  assert.equal(out.counts.passed, out.checks.filter(row => row.source === 'live_http' && row.status === 'passed').length);
+  assert.equal(out.localCounts.passed, out.checks.filter(row => row.source === 'local_fixture' && row.status === 'passed').length);
+  assert.equal(out.counts.passed, 7); assert.equal(out.localCounts.passed, 4);
+  assert.equal(out.counts.officialEngineNotRun, 41);
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
+  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'HTTP 200; jsonReady=true');
 });
