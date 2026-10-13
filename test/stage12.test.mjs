@@ -74,7 +74,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
   };
   try {
     const attempts = await runAttackChecks(configuration);
-    assert.equal(attempts.length, 20);
+    assert.equal(attempts.length, 16);
     assert.ok(attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed'));
     for (const row of attempts.filter(row => !row.attackId.startsWith('local_'))) {
       assert.equal(calls.filter(call => call.options.alephEvidence.caseId === row.attackId).length, 1);
@@ -98,7 +98,7 @@ test('one unavailable dashboard does not abort other bundle observations or beco
     if (url.pathname === '/api/operations-status') throw new Error('private error must not be retained');
     return fixtureResponse(url);
   } });
-  assert.equal(attempts.length, 20);
+  assert.equal(attempts.length, 16);
   assert.equal(attempts.find(row => row.attackId === 'anonymous_read').observed, 'HTTP 401');
   assert.match(attempts.find(row => row.attackId === 'operations_observation').observed, /^not_run;/u);
   assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 1);
@@ -110,8 +110,8 @@ test('whole-response deadlines end even if transport ignores AbortSignal or the 
     const before = Date.now();
     const attempts = await runAttackChecks(bundleFixture, { fetchImpl, timeoutMs: 30 });
     assert.ok(Date.now() - before < 1000);
-    assert.equal(attempts.length, 20);
-    assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 16);
+    assert.equal(attempts.length, 16);
+    assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 12);
     assert.ok(attempts.filter(row => row.attackId.startsWith('local_')).every(row => row.observed.startsWith('local fixture')));
   }
 });
@@ -132,6 +132,24 @@ test('R5 config input and public-example URL input execute identical observation
     : fixtureResponse(url) };
   const fromConfig = await runAttackChecks(repositoryConfig, options);
   const fromUrl = await runAttackChecks(repositoryConfig.publicAppUrl, options);
-  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 20);
+  assert.deepEqual(fromUrl, fromConfig); assert.equal(fromUrl.length, 16);
   await assert.rejects(runAttackChecks('http://fixture.local', options), /invalid_observation_origin/u);
+});
+
+test('isolated GET/HEAD-only bundle execution completes without claiming write or restore checks ran', async () => {
+  const calls = [];
+  const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async (url, options) => {
+    assert.ok(['GET', 'HEAD'].includes(options.method), 'isolated runner rejects mutating requests');
+    calls.push({ path: url.pathname, method: options.method });
+    return fixtureResponse(url);
+  } });
+  assert.equal(attempts.length, 16);
+  assert.equal(attempts.filter(row => row.observed.startsWith('not_run;')).length, 0);
+  assert.equal(calls.length, 13); // auth-config precedes the direct table read
+  assert.ok(!calls.some(row => row.path.startsWith('/api/restore/')));
+  for (const id of ['anonymous_create', 'anonymous_notice_put', 'anonymous_restore', 'malformed_restore']) {
+    assert.ok(!attempts.some(row => row.attackId === id));
+  }
+  assert.ok(attempts.some(row => row.attackId === 'anonymous_read' && row.observed === 'HTTP 401'));
+  assert.ok(attempts.some(row => row.attackId === 'backup_verification' && row.observed.includes('backupVerified=true')));
 });

@@ -35,7 +35,6 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
   const tasks = [];
   const add = (id, path, expected, options, format) => tasks.push(async () => row(id, expected, await request(path, id, options), format));
   add('anonymous_read', '/api/notes', '401; 자료 없음');
-  add('anonymous_create', '/api/notes', '401; 자료 없음', { method: 'POST' });
   add('malformed_token', '/api/notes', '401; 자료 없음', { headers: { Authorization: 'Bearer invalid' } });
   add('static_seed', '/data.json', '404');
   if (config.step >= 5) {
@@ -62,12 +61,11 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
       } }, value => `HTTP ${value.status}; leak marker: ${value.value}`);
     }
   }
-  if (config.step >= 8) for (const method of ['GET', 'PUT']) add(`anonymous_notice_${method.toLowerCase()}`,
-    '/api/notices/00000000-0000-4000-8000-000000000008', '401; 공지 본문 없음', { method });
+  // The isolated bundle runner permits GET/HEAD only. Write/restore denial
+  // remains covered by separate API tests, never inferred from these reads.
+  if (config.step >= 8) add('anonymous_notice_get',
+    '/api/notices/00000000-0000-4000-8000-000000000008', '401; 공지 본문 없음');
   if (config.step >= 10) {
-    for (const [id, headers] of [['anonymous_restore', {}], ['malformed_restore', { Authorization: 'Bearer invalid' }]]) {
-      add(id, '/api/restore/00000000-0000-4000-8000-000000000010', '401; 복원 실행 없음', { method: 'POST', headers });
-    }
     add('backup_verification', '/api/recovery-plan', 'HTTP 200; backupVerified true; scope notes; 정책 쓰기 없음',
       { read: response => response.json() }, value => `HTTP ${value.status}; backupVerified=${value.value?.backupVerified === true}; scope=${value.value?.scope ?? 'none'}`);
   }
@@ -85,7 +83,7 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
       return value.counts;
     } }, value => `HTTP ${value.status}; matched=${value.value.passed}; failed=${value.value.failed}; notRun=${value.value.notRun}; officialNotRun=${value.value.officialEngineNotRun}`);
 
-  // Each task makes only anonymous/invalid-token observations; no fixture login.
+  // Each task makes only read-only anonymous/invalid-token observations; no fixture login.
   // A failed case cannot cancel unrelated observations. At most two deadlines
   // are sequential (public auth-config then the original table request).
   const results = await Promise.all(tasks.map(task => task()));
