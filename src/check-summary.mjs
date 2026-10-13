@@ -14,7 +14,9 @@ export function summarizeChecks(attempts, { commit = null, checkedAt = new Date(
     fixedFixtureReady: attempts.filter(row => row.result === 'blocked' && row.attackId.startsWith('local_')).length,
     attackAttempts: attempts.map(({ attackId, stage, expected, observed, result }) => ({ attackId, stage, expected, observed, result,
       source: attackId.startsWith('local_') ? 'fixed_fixture_http' : 'live_http' })),
-    official: { total: officialCases.length, blocked: 0, failed: 0, notRun: officialCases.length, cases: officialCases } };
+    official: { total: officialCases.length, blocked: 0, failed: 0, notRun: officialCases.length, cases: officialCases },
+    provenance: { engine: 'ALEPH SDP 엔진', operationalConnection: 'not_connected',
+      student: ['학생 판정기', '학생 탐지 규칙', '접속 앱', '자료실 API', '작전실', '고정 가상 규칙 시험'] } };
 }
 export async function collectCheckSummary(config, options = {}) {
   return summarizeChecks(await runBundleChecks(config, options), { commit: options.commit, plannedCases: options.plannedCases });

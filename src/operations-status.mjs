@@ -62,5 +62,5 @@ export async function collectOperationsStatus(config, matrix, { fetchImpl = fetc
     detection: { action: detection.action, reasonCode: detection.reasonCode, source: 'local_fixture' },
     revocation: { status: 'not_connected', liveCount: null }, recovery, attackMatrix,
     provenance: { student: ['policy', 'detection', 'UI', 'notes API', 'backup verification and restore'],
-      engine: 'ALEPH SDP engine', operationalConnection: 'not provided, not verified' } };
+      engine: 'ALEPH SDP 엔진', operationalConnection: 'not provided, not verified' } };
 }
