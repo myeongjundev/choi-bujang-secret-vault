@@ -10,7 +10,12 @@ import { pathToFileURL } from 'node:url';
 import { runFixedRuleCheck } from '../src/fixed-rule-check.mjs';
 import { normalizeCheckResults } from '../src/check-results.mjs';
 const config = { publicAppUrl: 'https://fixture.local' };
-const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed', result: 'blocked' })) };
+const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'not_run', result: 'not_run' })) };
+function corruptedPlan() {
+  const input = structuredClone(matrix);
+  Object.assign(input.cases[0], { status: 'passed', result: 'blocked' });
+  return input;
+}
 
 test('dashboard counters come from actual calls; fake matrix status never becomes execution evidence', async () => {
   const urls = [];
@@ -19,7 +24,7 @@ test('dashboard counters come from actual calls; fake matrix status never become
     assert.deepEqual(Object.keys(options.alephEvidence).sort(), ['caseId', 'requestKey']);
     if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes', backupRevision: 1 });
     return new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }); };
-  const out = await collectOperationsStatus(config, matrix, { fetchImpl });
+  const out = await collectOperationsStatus(config, corruptedPlan(), { fetchImpl });
   assert.equal(urls.length, 7); assert.equal(out.counts.passed, 7); assert.equal(out.counts.failed, 0);
   assert.deepEqual(out.localCounts, { matched: 4, mismatched: 0 });
   assert.equal(out.counts.officialEngineNotRun, 41); assert.ok(out.attackMatrix.every(row => row.status === 'not_run' && row.result === 'not_run' && row.requestId === null));
@@ -85,7 +90,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
     if (url.pathname === '/api/checks') return Response.json(await runFixedRuleCheck(url.searchParams.get('case')));
     if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
     if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
-    if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 11, failed: 0, notRun: 3, officialEngineNotRun: 41 } });
+    if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 7, failed: 0, notRun: 7, officialEngineNotRun: 41 } });
     const status = url.pathname === '/data.json' ? 404 : url.pathname.startsWith('/api/') || url.pathname.startsWith('/rest/') ? 401 : 200;
     return new Response('{}', { status });
   };
@@ -107,7 +112,7 @@ async function fixtureResponse(url) {
   if (url.pathname === '/api/auth-config') return Response.json({ url: 'https://fixture.supabase.co', publishableKey: 'public-fixture' });
   if (url.pathname === '/api/recovery-plan') return Response.json({ backupVerified: true, scope: 'notes' });
   if (url.pathname === '/api/device-status') return Response.json({ connected: false, approval: 'unavailable' });
-  if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 11, failed: 0, notRun: 3, officialEngineNotRun: 41 } });
+  if (url.pathname === '/api/operations-status') return Response.json({ schema: 'vault.operations.v1', counts: { passed: 7, failed: 0, notRun: 7, officialEngineNotRun: 41 } });
   return new Response('{}', { status: url.pathname === '/data.json' ? 404 : url.pathname.startsWith('/api/') || url.pathname.startsWith('/rest/') ? 401 : 200 });
 }
 
@@ -261,7 +266,7 @@ test('unexecuted network cases and successful normal reads never inflate blocked
 
 test('summary exposes per-case unrun evidence and never promotes a planned case to blocked', async () => {
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
-  const summary = summarizeChecks(attempts, { plannedCases: matrix.cases });
+  const summary = summarizeChecks(attempts, { plannedCases: corruptedPlan().cases });
   assert.equal(summary.blocked, summary.attackAttempts.filter(row => row.result === 'blocked').length);
   assert.equal(summary.notRun, summary.attackAttempts.filter(row => row.result === 'not_run').length);
   assert.equal(summary.official.total, 41); assert.equal(summary.official.blocked, 0);
@@ -287,7 +292,7 @@ test('bundle builds official unrun evidence under the judge Git-command allowlis
   };
   const readFileSync = path => {
     if (String(path).endsWith('bundle-notes.json')) return JSON.stringify({ explanation: 'Executed bounded public checks, with unavailable cases separate.' });
-    if (String(path).endsWith('attack-matrix.json')) return JSON.stringify(matrix);
+    if (String(path).endsWith('attack-matrix.json')) return JSON.stringify(corruptedPlan());
     throw new Error('unexpected_file_read');
   };
   const importer = async url => String(url).endsWith('decider.mjs') ? { RULE_IDS: ['device_registered'] }
