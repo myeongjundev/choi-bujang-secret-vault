@@ -9,7 +9,7 @@ function table(id, rows, fields) {
 }
 async function refresh() {
   function clear() {
-    for (const id of ['rules', 'detection', 'revocation', 'recovery', 'counts', 'official-count']) $(id).textContent = '미확인';
+    for (const id of ['rules', 'detection', 'revocation', 'recovery', 'counts', 'official-count', 'submission-counts']) $(id).textContent = '미확인';
     $('checks').replaceChildren(); $('matrix').replaceChildren();
   }
   clear();
@@ -19,6 +19,12 @@ async function refresh() {
     if (!response.ok) throw new Error('unavailable');
     const data = await response.json();
     if (data.schema !== 'vault.operations.v1') throw new Error('invalid');
+    const summaryResponse = await fetch('/api/checks', { cache: 'no-store' });
+    if (!summaryResponse.ok) throw new Error('checks_unavailable');
+    const summary = await summaryResponse.json();
+    if (summary.schema !== 'vault.checks.v1' || ['total', 'blocked', 'failed', 'notRun'].some(key => !Number.isInteger(summary[key]) || summary[key] < 0)
+      || summary.total !== summary.blocked + summary.failed + summary.notRun) throw new Error('invalid_summary');
+    $('submission-counts').textContent = `제출 점검 ${summary.total}항목 · 기대 결과 일치 ${summary.blocked}건 · 불일치 ${summary.failed}건 · 미실측 ${summary.notRun}건. 확인 ${summary.checkedAt} · 커밋 ${summary.commit?.slice(0, 12) ?? '미확인'}`;
     $('rules').textContent = data.policyRules.join(', ');
     $('detection').textContent = `${data.detection.action} · 로컬 가상 사건`;
     $('revocation').textContent = '실제 회수 집행 미연결';

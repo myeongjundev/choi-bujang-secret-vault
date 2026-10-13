@@ -6,6 +6,7 @@
 <button id="refresh">실제 결과 다시 확인</button><p id="status" role="status">서버 결과 미확인</p>
 <div class="grid"><section class="card"><h2>판정 규칙</h2><p id="rules">미확인</p></section><section class="card"><h2>탐지 사건</h2><p id="detection">미실행</p></section>
 <section class="card"><h2>회수 상태</h2><p id="revocation">미연결</p></section><section class="card"><h2>복구 사본</h2><p id="recovery">미확인</p></section></div>
+<section class="card"><h2>제출 점검 기록 요약</h2><p id="submission-counts">미확인</p><p>제출과 같은 점검 함수로 새 요청을 보내 서버가 집계합니다. blocked는 점검의 기대 결과 일치이며 운영 심판 통과를 뜻하지 않습니다. 저장된 과거 제출 묶음을 현재 실행 기록으로 사용하지 않습니다.</p></section>
 <section class="card"><h2>실제 관측 기록</h2><p id="counts">미확인</p><p>요청 ID는 관측자가 생성한 상관 번호입니다. local_fixture는 실제 사용자 접속이나 운영 회수의 증거가 아닙니다.</p>
 <div class="table-scroll"><table><thead><tr><th>점검</th><th>요청</th><th>출처</th><th>기대</th><th>실제 결과</th><th>상태</th><th>관측 요청 ID</th><th>확인 시각 UTC</th></tr></thead><tbody id="checks"></tbody></table></div></section>
 <section class="card"><h2>공식 41종 시험 목록</h2><p id="official-count">미실행</p><p>도감의 시험 이름과 단계별 기대 조건입니다. 게임 심판의 승인 기록과 현재 운영 엔진 재현 기록은 구분합니다. 실제 사건이 없는 항목에는 요청 ID·시각을 만들지 않습니다.</p>

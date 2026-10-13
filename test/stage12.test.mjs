@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import { collectOperationsStatus } from '../src/operations-status.mjs';
 import { readFile } from 'node:fs/promises';
 import { runAttackChecks } from '../src/attack-check.mjs';
+import { collectCheckSummary, summarizeChecks } from '../src/check-summary.mjs';
+import checkSummaryHandler from '../api/checks.mjs';
 const config = { publicAppUrl: 'https://fixture.local' };
 const matrix = { cases: Array.from({ length: 41 }, (_, i) => ({ id: `case_${i}`, stage: 12, name: 'Practice matrix entry', expected: 'reject', status: 'passed' })) };
 
@@ -42,8 +44,9 @@ test('dashboard renders server observations and clears prior successes if a new 
     : new Response(null, { status: url.pathname === '/' ? 200 : url.pathname === '/data.json' ? 404 : 401 }) });
   const source = await readFile(new URL('../src/operations-browser.mjs', import.meta.url), 'utf8');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  await new AsyncFunction('document', 'fetch', source)(document, async () => {
+  await new AsyncFunction('document', 'fetch', source)(document, async path => {
     if (unavailable) throw new Error('network down');
+    if (path === '/api/checks') return Response.json({ schema: 'vault.checks.v1', total: 16, blocked: 12, failed: 0, notRun: 4 });
     return Response.json(observations);
   });
   assert.ok(elements.get('counts').textContent.includes('실제 HTTP 7건 일치'));
@@ -77,7 +80,7 @@ test('bundle HTTP observations correlate with their real case IDs without transm
   try {
     const attempts = await runAttackChecks(configuration);
     assert.equal(attempts.length, 16);
-    assert.ok(attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed'));
+    assert.ok(attempts.every(row => Object.keys(row).sort().join(',') === 'attackId,expected,observed,result,stage'));
     for (const row of attempts.filter(row => !row.attackId.startsWith('local_'))) {
       assert.equal(calls.filter(call => call.options.alephEvidence.caseId === row.attackId).length, 1);
     }
@@ -165,7 +168,7 @@ test('bundle claims only recorded HTTP statuses and marks non-network fixtures n
   } });
   for (const row of attempts) {
     assert.equal(row.observed, traced.has(row.attackId)
-      ? `HTTP ${traced.get(row.attackId)}${row.attackId === 'operations_observation' ? '; jsonReady=true' : ''}` : 'not_run');
+      ? `HTTP ${traced.get(row.attackId)}` : 'not_run');
   }
   assert.equal(attempts.filter(row => row.observed === 'not_run').length, 4);
   assert.ok(!JSON.stringify(attempts.map(row => row.observed)).match(/fixture|leak marker|connected|scope|matched|note count/u));
@@ -180,5 +183,45 @@ test('dashboard live counts equal HTTP rows while fixture successes remain a sep
   assert.equal(out.counts.passed, 7); assert.equal(out.localCounts.passed, 4);
   assert.equal(out.counts.officialEngineNotRun, 41);
   const attempts = await runAttackChecks(bundleFixture, { fetchImpl: async url => fixtureResponse(url) });
-  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'HTTP 200; jsonReady=true');
+  assert.equal(attempts.find(row => row.attackId === 'operations_observation').observed, 'HTTP 200');
+});
+
+test('submission results and fresh screen summary use the same real responses, including failure and unavailable cases', async () => {
+  const options = { fetchImpl: async url => fixtureResponse(url), commit: 'a'.repeat(40) };
+  const attempts = await runAttackChecks(bundleFixture, options);
+  const summary = await collectCheckSummary(bundleFixture, options);
+  assert.deepEqual({ total: summary.total, blocked: summary.blocked, failed: summary.failed, notRun: summary.notRun },
+    { total: 16, blocked: 12, failed: 0, notRun: 4 });
+  assert.deepEqual(summarizeChecks(attempts, { commit: summary.commit, checkedAt: summary.checkedAt }), summary);
+  const failing = await collectCheckSummary(bundleFixture, { fetchImpl: async url => {
+    if (url.pathname === '/api/notes') return new Response('unexpected', { status: 200 });
+    if (url.pathname === '/api/operations-status') throw new Error('unavailable');
+    return fixtureResponse(url);
+  } });
+  assert.equal(failing.failed, 2); assert.equal(failing.notRun, 5); assert.equal(failing.blocked, 9);
+  assert.equal(failing.total, failing.blocked + failing.failed + failing.notRun);
+  assert.throws(() => summarizeChecks([{ result: 'invented' }]), /invalid_check_results/u);
+});
+
+test('summary API refuses mutations and arbitrary cases and exposes only a fresh bounded aggregate', async () => {
+  const originalFetch = globalThis.fetch;
+  const repositoryConfig = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url), 'utf8'));
+  let calls = 0;
+  globalThis.fetch = async (url, options) => {
+    calls++; assert.equal(options.method, 'GET');
+    return url.pathname === '/api/auth-config'
+      ? Response.json({ url: new URL(repositoryConfig.originalApiUrl).origin, publishableKey: 'public-fixture' })
+      : fixtureResponse(url);
+  };
+  const response = () => ({ code: null, body: null, setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } });
+  try {
+    for (const req of [{ method: 'POST' }, { method: 'GET', query: { case: 'user-supplied' } }]) {
+      const res = response(); await checkSummaryHandler(req, res);
+      assert.ok([400, 405].includes(res.code)); assert.equal(calls, 0);
+    }
+    const res = response(); await checkSummaryHandler({ method: 'GET' }, res);
+    assert.equal(res.code, 200); assert.equal(res.body.total, 16);
+    assert.equal(res.body.blocked, 12); assert.equal(res.body.failed, 0); assert.equal(res.body.notRun, 4);
+    assert.equal(calls, 13); assert.ok(!JSON.stringify(res.body).includes('public-fixture'));
+  } finally { globalThis.fetch = originalFetch; }
 });

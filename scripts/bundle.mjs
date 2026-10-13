@@ -77,7 +77,9 @@ try {
   }
   for (const attempt of attackAttempts) {
     if (!attempt || typeof attempt !== 'object' || Array.isArray(attempt)
-        || Object.keys(attempt).sort().join(',') !== 'attackId,expected,observed'
+        || !['attackId,expected,observed', 'attackId,expected,observed,result,stage'].includes(Object.keys(attempt).sort().join(','))
+        || ('result' in attempt && (!['blocked', 'breached', 'not_run'].includes(attempt.result)
+          || !Number.isInteger(attempt.stage) || attempt.stage < 1 || attempt.stage > 12))
         || typeof attempt.attackId !== 'string' || !/^[a-z0-9][a-z0-9_.-]{0,79}$/iu.test(attempt.attackId)
         || typeof attempt.expected !== 'string' || !attempt.expected.trim() || attempt.expected.length > 300
         || typeof attempt.observed !== 'string' || !attempt.observed.trim() || attempt.observed.length > 300) {
@@ -88,7 +90,7 @@ try {
     fail('공격 점검 ID가 중복되었습니다.');
   }
   const bundle = {
-    schema: 'aleph.defense.submission.v2', step: config.step, commit, repoUrl,
+    schema: 'aleph.defense.submission.v2', step: config.step, commit, repoUrl, checkedAt: new Date().toISOString(),
     changedFiles, policyRules,
     attackAttempts, explanation: notes.explanation.trim(), blockedAt: notes.blockedAt ?? null,
     identityProvider: config.identityProvider ?? null, allowedRoutes: config.allowedRoutes ?? [],

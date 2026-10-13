@@ -1,5 +1,13 @@
 # BYTE BACK 자료실 · 12단계 저장점
 
+## 12단계 제출/화면 공통 요약 · 2026-10-13
+
+운영 공개 표본 ChoiTimo/byteback-sample-pass의 e94ecff31e6b7003d1ccc60d9fa943ac80c6411d를 대조했습니다. jsonReady는 실제 JSON의 ready 필드이며 파싱 성공이 아니므로 근거 없는 jsonReady=true 주장을 제거했습니다. 공개 표본의 stage/result 메타데이터와 /api/checks 요약 계약을 반영했습니다. 기존 R5 3필드 묶음도 읽을 수 있게 보존하고 현재 점검은5필드를 생성합니다. result는 실제 응답의 기대 조건 대조로 계산하며 네트워크 없는 가상4건은not_run입니다.
+
+/api/checks는 제출과 같은 runBundleChecks를 새로 실행해 total·blocked·failed·notRun·commit·checkedAt를 집계합니다. 운영 심판 통과를 뜻하는 값은 아닙니다. 작전실 화면은 이 실제 API 요약을 표시하고 읽기 실패 시 이전 수치를 비웁니다. 제외된 artifacts/submission.json을 커밋하거나 과거 영수증을 새 결과로 사용하지 않습니다. 일반 관측 HTTP7/가상4와 제출 점검HTTP12/not_run4는 서로 다른 표로 표시합니다. API는GET만 허용하고 임의case 입력을 실행하지 않습니다. 보호API·DB·원본데이터·XDR은 보존했습니다.
+
+재현: npm test → 전체75개 통과. 커밋 후 npm run check →16항목·blocked12·failed0·not_run4(실행시 응답에 따라 변할 수 있음). 정상 공개 읽기/백업 검증과 무인증/위조 거부·불일치/미실행·화면 오류 지우기·API 읽기제한을 검증합니다. 실제 심판 결과는 별도 확인합니다.
+
 ## 12단계 HTTP/가상 집계 분리 · 2026-10-13
 
 열 번째 실제 심판은45점이며 실행 기록 대조를 통과하고 기록/화면 수치조건 하나만 남겼습니다. 작전실 counts는 실제 HTTP 관측7건만 집계하고 localCounts에 로컬 가상4건을 따로 담아 화면에서도 분리합니다. 운영3건·공식41종은 미실행으로 유지합니다. 제출 observed에는 검증한 작전실 JSON 응답에 한해 허용된 jsonReady=true를 덧붙이며 본문·임의 의미 수치를 쓰지 않습니다. API JSON 실패는 not_run이고 이전 표시를 지웁니다. 보호 정책은 보존했습니다. 재현: npm test(전체73개), 커밋 후 npm run check(HTTP12·not_run4). 해당 집계의 실제 심판 효과는 재제출로 별도 확인합니다.

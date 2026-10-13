@@ -26,8 +26,14 @@ async function observe(url, { fetchImpl, timeoutMs, method = 'GET', headers = {}
 // The judge compares only bounded transport facts against its masked trace.
 // Semantic checks remain local/API evidence, never invented network facts.
 const notRun = () => 'not_run';
-const row = (attackId, expected, result, format = value => `HTTP ${value.status}`) => ({ attackId, expected,
-  observed: result.ran ? `HTTP ${result.status}${attackId === 'operations_observation' ? '; jsonReady=true' : ''}` : notRun(result) });
+const STAGES = { anonymous_read: 3, malformed_token: 3, static_seed: 2, direct_anonymous_read: 5,
+  public_asset_index: 5, public_asset_app: 5, public_asset_identity: 5, anonymous_notice_get: 8,
+  backup_verification: 10, device_adapter_availability: 11, public_connection_asset: 11, operations_observation: 12 };
+const row = (attackId, expected, result, accepts = value => value.status === Number(expected.match(/\d{3}/u)?.[0])) => ({
+  attackId, stage: STAGES[attackId], expected,
+  observed: result.ran ? `HTTP ${result.status}` : notRun(result),
+  result: !result.ran ? 'not_run' : accepts(result) ? 'blocked' : 'breached',
+});
 
 export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5000 } = {}) {
   const app = new URL(config.publicAppUrl);
@@ -44,7 +50,7 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
     tasks.push(async () => {
       const auth = await request('/api/auth-config', 'public_auth_config', { read: response => response.json() });
       if (!auth.ran || auth.status !== 200 || typeof auth.value?.url !== 'string' || typeof auth.value?.publishableKey !== 'string') {
-        return { attackId: 'direct_anonymous_read', expected: '원본 직접 접근 거부; 자료 없음', observed: 'not_run' };
+        return row('direct_anonymous_read', '원본 직접 접근 거부; 자료 없음', { ran: false });
       }
       const original = new URL(config.originalApiUrl);
       if (original.origin !== new URL(auth.value.url).origin || original.username || original.password || original.search || original.hash
@@ -54,13 +60,14 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
           if (!response.ok) { await response.text(); return 0; }
           const data = await response.json(); return Array.isArray(data) ? data.length : -1;
         } });
-      return row('direct_anonymous_read', '원본 직접 접근 거부; 자료 없음', result, value => `HTTP ${value.status}; note count: ${value.value}`);
+      return row('direct_anonymous_read', '원본 직접 접근 거부; 자료 없음', result,
+        value => [401, 403, 404].includes(value.status) && value.value === 0);
     });
     for (const [id, path] of [['public_asset_index', '/'], ['public_asset_app', '/app.js'], ['public_asset_identity', '/aleph.json']]) {
       add(id, path, '서버 키·시드 표식 없음', { read: async response => {
         const body = await response.text();
         return /sb_secret_[A-Za-z0-9_-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/u.test(body) || body.includes(config.sampleMarker);
-      } }, value => `HTTP ${value.status}; leak marker: ${value.value}`);
+      } }, value => value.status === 200 && value.value === false);
     }
   }
   // The isolated bundle runner permits GET/HEAD only. Write/restore denial
@@ -69,21 +76,21 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
     '/api/notices/00000000-0000-4000-8000-000000000008', '401; 공지 본문 없음');
   if (config.step >= 10) {
     add('backup_verification', '/api/recovery-plan', 'HTTP 200; backupVerified true; scope notes; 정책 쓰기 없음',
-      { read: response => response.json() }, value => `HTTP ${value.status}; backupVerified=${value.value?.backupVerified === true}; scope=${value.value?.scope ?? 'none'}`);
+      { read: response => response.json() }, value => value.status === 200 && value.value?.backupVerified === true && value.value?.scope === 'notes');
   }
   if (config.step >= 11) {
     add('device_adapter_availability', '/api/device-status', '운영 연결 여부를 사실대로 표시; 설치 표시로 승인하지 않음',
-      { read: response => response.json() }, value => `HTTP ${value.status}; connected=${value.value?.connected === true}; approval=${value.value?.approval ?? 'unknown'}`);
+      { read: response => response.json() }, value => value.status === 200 && typeof value.value?.connected === 'boolean' && typeof value.value?.approval === 'string');
     add('public_connection_asset', '/connect.js', '서버 키·시드 표식 없음', { read: async response => {
       const body = await response.text(); return /sb_secret_[A-Za-z0-9_-]{12,}/u.test(body) || body.includes(config.sampleMarker);
-    } }, value => `HTTP ${value.status}; leak marker: ${value.value}`);
+    } }, value => value.status === 200 && value.value === false);
   }
   if (config.step >= 12) add('operations_observation', '/api/operations-status', '실제 관측·가상 시험·미실행 구분; 41종 미실행을 성공으로 세지 않음',
     { read: async response => {
       const value = await response.json();
       if (value.schema !== 'vault.operations.v1' || !value.counts || ['passed', 'failed', 'notRun', 'officialEngineNotRun'].some(key => !Number.isInteger(value.counts[key]) || value.counts[key] < 0)) throw new Error('invalid_observation_response');
       return value.counts;
-    } }, value => `HTTP ${value.status}; matched=${value.value.passed}; failed=${value.value.failed}; notRun=${value.value.notRun}; officialNotRun=${value.value.officialEngineNotRun}`);
+    } }, value => value.status === 200);
 
   // Each task makes only read-only anonymous/invalid-token observations; no fixture login.
   // A failed case cannot cancel unrelated observations. At most two deadlines
@@ -92,7 +99,7 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
   const local = [];
   const decisionCase = async (id, patch, expected) => {
     const out = await decide({ ...fixtureRequests().normal, ...patch });
-    local.push({ attackId: id, expected: `local fixture ${expected}; 운영 연결 증거 아님`, observed: 'not_run' });
+    local.push({ attackId: id, stage: 6, expected: `local fixture ${expected}; 운영 연결 증거 아님`, observed: 'not_run', result: 'not_run' });
   };
   if (config.step >= 6) {
     await decisionCase('local_unregistered_device', { deviceRegistered: false }, 'deny');
@@ -104,7 +111,7 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
   }
   if (config.step >= 7) for (const verified of [false, true]) {
     const out = await decide({ ...fixtureRequests().suspicious, stepUp: { verified, authAgeSeconds: verified ? 60 : null } });
-    local.push({ attackId: verified ? 'local_step_up_verified' : 'local_compound_risk', expected: `local fixture ${verified ? 'allow' : 'step_up'}; 운영 재인증 증거 아님`, observed: 'not_run' });
+    local.push({ attackId: verified ? 'local_step_up_verified' : 'local_compound_risk', stage: 7, expected: `local fixture ${verified ? 'allow' : 'step_up'}; 운영 재인증 증거 아님`, observed: 'not_run', result: 'not_run' });
   }
   if (config.step >= 8 && config.step < 11) {
     await decisionCase('local_ambiguous_list', { path: '/api/notes', route: 'GET /api/notes' }, 'deny');
@@ -113,7 +120,7 @@ export async function runBundleChecks(config, { fetchImpl = fetch, timeoutMs = 5
   if (config.step >= 9) for (const count of config.step >= 12 ? [121] : [120, 121]) {
     const events = Array.from({ length: count }, (_, index) => ({ at: new Date(1700000000000 + index * 2000).toISOString(), method: 'GET', identity: { sub: 'local_subject_fixture' } }));
     const out = detect(events);
-    local.push({ attackId: `local_detection_${count}`, expected: `${count === 120 ? 'observe' : 'propose_revocation'}; 운영 회수 증거 아님`, observed: 'not_run' });
+    local.push({ attackId: `local_detection_${count}`, stage: 9, expected: `${count === 120 ? 'observe' : 'propose_revocation'}; 운영 회수 증거 아님`, observed: 'not_run', result: 'not_run' });
   }
   return [...results, ...local];
 }
