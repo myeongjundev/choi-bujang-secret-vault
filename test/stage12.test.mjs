@@ -292,6 +292,10 @@ test('bundle builds official unrun evidence under the judge Git-command allowlis
   assert.deepEqual(errors, []); assert.equal(fakeProcess.exitCode, undefined); assert.equal(writes.length, 1);
   assert.equal(writes[0].officialAttackMatrix.length, 41);
   assert.ok(writes[0].officialAttackMatrix.every(row => row.result === 'not_run' && row.requestId === null && row.checkedAt === null));
+  assert.deepEqual(writes[0].counts, { total: 1, blocked: 1, failed: 0, notRun: 0 });
+  assert.deepEqual(writes[0].officialCounts, { total: 41, blocked: 0, failed: 0, notRun: 41 });
+  assert.equal(writes[0].provenance.engine, 'ALEPH SDP 엔진');
+  assert.equal(writes[0].provenance.operationalConnection, 'not_connected');
   assert.equal(calls.filter(args => args[0] === 'show').length, 1);
 });
 
