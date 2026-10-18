@@ -172,6 +172,12 @@ export function createStudentView() {
             add(detail, 'p', `접속 상태: ${stateText(access, event.state?.access)}`);
             add(detail, 'p', `세션 상태: ${stateText(sessions, event.state?.session)}`);
             add(detail, 'p', `기기 상태: ${stateText(devices, event.state?.device)}`);
+            for (const action of event.supportedActions ?? []) {
+              const unsupported = add(detail, 'button', `${action} 미지원`);
+              unsupported.type = 'button';
+              unsupported.disabled = true;
+              add(detail, 'p', '아직 지원하지 않는 조치입니다. 조치 실행 연결은 준비 중입니다.');
+            }
           });
         }
       };
@@ -179,7 +185,100 @@ export function createStudentView() {
       draw();
       return root;
     },
-    renderStatus() { return '학생 구현 대기: 기기·세션·알림과 연결 점검 상태를 구분하세요.'; },
+    renderStatus({ devices, sessions, notifications, diagnostics, mode } = {}) {
+      const root = document.createElement('section');
+      root.setAttribute('aria-label', '기기·세션·알림과 도움정보');
+      const add = (parent, tag, value = '') => {
+        const node = document.createElement(tag);
+        node.textContent = String(value);
+        parent.appendChild(node);
+        return node;
+      };
+      const safe = value => {
+        if (typeof value !== 'string' || !value.trim() || value.length > 2000) return '확인 불가';
+        if (/(?:Bearer\s+|sk-(?:proj-|ant-|svcacct-)?[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_ -]?key|token|password|secret|비밀번호|토큰)\s*[:=])/i.test(value)) return '[비밀값 제외]';
+        return value;
+      };
+      const modes = { connected: '연결됨', demo: '예제 자료 · 실제 연결 아님', disconnected: '연결 없음', unknown: '확인 불가' };
+      const modeText = value => Object.hasOwn(modes, value) ? modes[value] : modes.unknown;
+      const deviceLabels = { compliant: '보안 기준 충족', noncompliant: '보안 기준 미충족', unknown: '확인 불가' };
+      const sessionLabels = { active: '활성', expired: '만료', revoked: '철회됨', unknown: '확인 불가' };
+      const statusText = (labels, value) => {
+        const code = Object.hasOwn(labels, value) ? value : 'unknown';
+        return `${labels[code]}(${code})`;
+      };
+      const failure = (parent, name, resource) => {
+        add(parent, 'p', `${name}을 불러오지 못했습니다: ${safe(resource?.error?.message)}`);
+        if (/TIMEOUT|TIME_OUT/i.test(resource?.error?.code ?? '') || /시간.*초과|timeout/i.test(resource?.error?.message ?? '')) add(parent, 'p', '요청 시간 초과로 현재 상태를 확인할 수 없습니다.');
+        add(parent, 'p', '다시 시도는 위쪽 다시 불러오기 버튼을 직접 누르세요. 자동으로 다시 요청하지 않습니다.');
+      };
+      add(root, 'p', modeText(mode));
+      const resources = [
+        ['기기 목록', devices, '등록된 기기가 없습니다.', (list, row) => add(list, 'li', `${safe(row.label)} · ${safe(row.id)} · ${statusText(deviceLabels, row.status)}`)],
+        ['현재 세션', sessions, '현재 연결이 없습니다.', (list, row) => add(list, 'li', `${safe(row.id)} · ${statusText(sessionLabels, row.status)}`)],
+      ];
+      for (const [name, resource, empty, render] of resources) {
+        const section = add(root, 'section');
+        add(section, 'h3', name);
+        add(section, 'p', modeText(resource?.mode));
+        if (name === '현재 세션') add(section, 'p', '현재 검증된 연결 하나의 상태입니다. 지난 세션 목록은 제공되지 않습니다.');
+        if (resource?.status === 'loading') add(section, 'p', `${name} 불러오는 중`);
+        else if (resource?.status === 'error') failure(section, name, resource);
+        else if (resource?.status === 'ok' && Array.isArray(resource.data)) {
+          if (resource.data.length === 0) add(section, 'p', empty);
+          else {
+            const list = add(section, 'ul');
+            for (const row of resource.data) render(list, row);
+          }
+        } else add(section, 'p', `${name} 확인 불가`);
+      }
+      const alerts = add(root, 'section');
+      add(alerts, 'h3', '보안 알림');
+      if (!Array.isArray(notifications)) add(alerts, 'p', '알림 확인 불가');
+      else if (notifications.length === 0) add(alerts, 'p', '주의할 알림이 없습니다.');
+      else {
+        const list = add(alerts, 'ul');
+        for (const notification of notifications) add(list, 'li', `자료: ${safe(notification.resource)} · 코드: ${safe(notification.code)} · ${safe(notification.message)}`);
+      }
+      const help = add(root, 'section');
+      add(help, 'h3', '도움정보');
+      add(help, 'p', modeText(diagnostics?.mode));
+      add(help, 'p', '도움 요청에 사용할 공개 점검 정보만 복사합니다. 사용자가 누를 때만 복사하며 자동 전송하지 않습니다.');
+      let summary = null;
+      if (diagnostics?.status === 'ok' && diagnostics.data) {
+        const data = diagnostics.data;
+        add(help, 'p', '도움정보는 아래 확인 시각의 별도 점검 결과입니다. 현재 연결 상태를 보장하지 않습니다.');
+        // 허용된 여섯 필드만 선택한다. 서버 응답 전체나 추가 필드는 표시·복사하지 않는다.
+        summary = {
+          requestId: safe(data.requestId), component: safe(data.component), version: safe(data.version),
+          checkedAt: safe(data.checkedAt),
+          engine: { mode: Object.hasOwn(modes, data.engine?.mode) ? data.engine.mode : 'unknown', code: safe(data.engine?.code) },
+        };
+        for (const key of ['requestId', 'component', 'version', 'checkedAt']) add(help, 'p', `${key}: ${summary[key]}`);
+        add(help, 'p', `engine.mode: ${modeText(summary.engine.mode)}(${summary.engine.mode})`);
+        add(help, 'p', `engine.code: ${summary.engine.code}`);
+      } else if (diagnostics?.status === 'loading') add(help, 'p', '도움정보 불러오는 중');
+      else if (diagnostics?.status === 'error') {
+        failure(help, '도움정보', diagnostics);
+        add(help, 'p', '도움정보는 제공 화면의 도움정보 불러오기 버튼을 직접 눌러 다시 확인하세요.');
+      } else add(help, 'p', '도움정보 점검 전입니다. 제공 화면의 도움정보 불러오기 버튼을 직접 누르세요.');
+      const copy = add(help, 'button', '도움정보 복사');
+      copy.type = 'button';
+      copy.disabled = summary === null;
+      const copyResult = add(help, 'p');
+      copyResult.setAttribute('aria-live', 'polite');
+      copy.addEventListener('click', async () => {
+        if (summary === null) return;
+        try {
+          if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('CLIPBOARD_UNAVAILABLE');
+          await navigator.clipboard.writeText(JSON.stringify(summary, null, 2));
+          copyResult.textContent = '도움 요청에 사용할 공개 도움정보를 복사했습니다.';
+        } catch {
+          copyResult.textContent = '도움정보를 복사하지 못했습니다. 화면의 공개 점검 정보를 확인하세요.';
+        }
+      });
+      return root;
+    },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
     renderAiConnection() { return '학생 구현 대기: 모델 응답 점검과 실제 사건 설명을 구분하고 AI 오류·취소·수동 복구를 안내하세요.'; },
     renderExplanation() { return '학생 구현 대기: 선택한 사건의 근거·규칙·현재 상태와 AI 설명을 연결하세요. 제안은 자동 실행하지 않습니다.'; },
