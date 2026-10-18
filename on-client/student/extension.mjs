@@ -22,11 +22,13 @@ export function createStudentView() {
       const device = (parent, item) => {
         row(parent, '기기 이름', item?.label);
         row(parent, '기기 ID', item?.id);
-        row(parent, '기기 상태', label(deviceLabels, item?.status));
+        const status = Object.hasOwn(deviceLabels, item?.status) ? item.status : 'unknown';
+        row(parent, '기기 상태', `${label(deviceLabels, status)}(${status})`);
       };
       const session = (parent, item) => {
         row(parent, '세션 ID', item?.id);
-        row(parent, '세션 상태', label(sessionLabels, item?.status));
+        const status = Object.hasOwn(sessionLabels, item?.status) ? item.status : 'unknown';
+        row(parent, '세션 상태', `${label(sessionLabels, status)}(${status})`);
       };
       const resource = (title, input, render) => {
         const section = add(root, 'section', '');
