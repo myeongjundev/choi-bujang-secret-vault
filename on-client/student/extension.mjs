@@ -1,6 +1,47 @@
 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다.
 // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다.
 export function createStudentView() {
+  // AI 입력은 제공 UI가 검증·정제한다. 추가 필드나 원문 오류는 출력하지 않는다.
+  const aiText = value => {
+    if (typeof value !== 'string' || !value.trim() || value.length > 2000) return '확인 불가';
+    if (/(?:Bearer\s+|sk-(?:proj-|ant-|svcacct-)?[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_ -]?key|token|password|secret|비밀번호|토큰)\s*[:=])/i.test(value)) return '[비밀값 제외]';
+    return value;
+  };
+  const aiLine = (root, text) => {
+    const node = document.createElement('p');
+    node.textContent = String(text);
+    root.appendChild(node);
+  };
+  const aiFailure = (root, error) => {
+    const hints = {
+      ON_AI_PROVISIONING_PENDING: '앱 연결·권한 준비 중입니다. 제공 화면의 계정 연결 상태를 확인하고, 담당자에게 앱 권한 발급·AI 게이트 반영을 확인하세요.',
+      WB_CLCO_AUTH_REQUIRED: '인증을 확인하지 못했습니다. 제공 화면에서 계정 연결을 다시 확인하세요. Workbench 열쇠를 복사하지 마세요.',
+      WB_CLCO_ACCESS_BLOCKED: '접근이 제한됐습니다. 담당자에게 앱 이용 권한을 확인하세요.',
+      WB_CLCO_COHORT_BUDGET_EXHAUSTED: '반 사용량이 소진됐습니다. 담당자에게 확인하세요.',
+      WB_CLCO_LIMIT_REACHED: '이용 한도에 도달했습니다. 담당자에게 확인하세요.',
+      WB_CLCO_SESSION_CLOSED: '현재 이용 시간이 아닙니다. 이용 가능 시간을 확인하세요.',
+      WB_CLCO_RATE_LIMITED: '요청 제한입니다. 잠시 뒤 직접 다시 점검하세요.',
+      WB_CLCO_TIMEOUT: '요청 시간 초과입니다. 필요하면 직접 다시 점검하세요.',
+      REQUEST_TIMEOUT: '요청 시간 초과입니다. 필요하면 직접 다시 점검하세요.',
+      ENGINE_TIMEOUT: '확인 시간 초과입니다. 필요하면 직접 다시 점검하세요.',
+      TIMEOUT: '요청 시간 초과입니다. 필요하면 직접 다시 점검하세요.',
+      WB_CLCO_CANCELLED: '요청이 취소됐습니다. 이전 응답은 현재 결과가 아닙니다.',
+      REQUEST_CANCELLED: '요청이 취소됐습니다. 이전 응답은 현재 결과가 아닙니다.',
+      CANCELLED: '요청이 취소됐습니다. 이전 응답은 현재 결과가 아닙니다.',
+      MODEL_NOT_CONFIGURED: '사용할 모델 설정을 담당자에게 확인하세요.',
+      ON_AI_MODEL_LIST_EMPTY: '쓸 수 있는 모델이 없습니다. 담당자에게 모델 허용 설정을 확인하세요.',
+      ON_AI_AUTHORIZATION_CHANGED: '점검 중 권한이 바뀌었습니다. 담당자에게 현재 권한을 확인하세요.',
+      SUBJECT_SCOPE_UNVERIFIED: '현재 계정과 사건의 연결을 확인할 수 없습니다. 계정 연결을 확인하세요.',
+      ON_AI_INVALID_INPUT: '사건 근거·규칙 입력을 확인할 수 없습니다. 기존 기록을 확인하세요.',
+      ON_AI_INVALID_OUTPUT: 'AI 응답 형식을 확인할 수 없습니다. 기존 기록을 확인하세요.',
+      AI_REQUEST_UNVERIFIED: '연결·응답을 확인할 수 없습니다. 네트워크와 계정·앱 권한을 확인하고 필요하면 직접 다시 점검하세요.',
+    };
+    const known = Object.hasOwn(hints, error?.code);
+    const code = known ? error.code : 'AI_REQUEST_UNVERIFIED';
+    aiLine(root, `오류 코드: ${code}`);
+    aiLine(root, known ? aiText(error.message) : 'AI 연결 또는 응답을 확인할 수 없습니다.');
+    aiLine(root, hints[code]);
+  };
   return {
     renderIdentity({ me, devices, sessions } = {}) {
       // 매 호출마다 새 DOM을 반환한다. 제공 UI가 이전 표시를 교체하므로 실패 시 옛 신원이 남지 않는다.
@@ -280,8 +321,46 @@ export function createStudentView() {
       return root;
     },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
-    renderAiConnection() { return '학생 구현 대기: 모델 응답 점검과 실제 사건 설명을 구분하고 AI 오류·취소·수동 복구를 안내하세요.'; },
-    renderExplanation() { return '학생 구현 대기: 선택한 사건의 근거·규칙·현재 상태와 AI 설명을 연결하세요. 제안은 자동 실행하지 않습니다.'; },
+    renderAiConnection({ status, mode, data, error, checkedAt } = {}) {
+      const root = document.createElement('section');
+      root.setAttribute('aria-label', 'AI 연결 점검 결과');
+      const modes = { connected: '연결된 서버 응답', demo: '예제 자료 · 실제 연결 아님', disconnected: '연결 없음', unknown: '연결 상태 확인 불가' };
+      aiLine(root, Object.hasOwn(modes, mode) ? modes[mode] : modes.unknown);
+      if (status === 'idle') aiLine(root, 'AI 연결 점검 전');
+      else if (status === 'loading') aiLine(root, 'AI 연결 점검 중');
+      else if (status === 'error') aiFailure(root, error);
+      else if (status === 'ok' && data?.transportChecked === true
+        && ['test', 'verified'].includes(data.audienceAuthorization)
+        && Number.isInteger(data.modelCount) && data.modelCount >= 0 && data.modelCount <= 10000) {
+        aiLine(root, data.audienceAuthorization === 'test' ? '시험 연결 점검(test)' : '앱 권한 확인 후 점검(verified)');
+        aiLine(root, `모델 수: ${data.modelCount}`);
+        aiLine(root, `확인 시각: ${aiText(checkedAt)}`);
+        aiLine(root, '모델 목록 연결만 점검했습니다. 사건 설명은 아직 실행하지 않았습니다.');
+        if (data.audienceAuthorization === 'test') aiLine(root, '시험 응답은 실제 앱 이용 권한이나 사건 설명 호출의 성공을 뜻하지 않습니다.');
+      } else aiLine(root, 'AI 연결 점검 결과 확인 불가');
+      aiLine(root, '다시 점검하려면 제공 화면의 AI 연결 점검 버튼을 직접 누르세요. 자동으로 다시 점검하지 않습니다.');
+      return root;
+    },
+    renderExplanation({ event, explanation, checkedAt } = {}) {
+      const root = document.createElement('section');
+      root.setAttribute('aria-label', '사건 AI 설명');
+      // 매번 새 DOM을 반환하므로 실패·취소·계정 변경 때 이전 사건의 성공 표식을 남기지 않는다.
+      if (explanation?.status === 'ok' && typeof event?.id === 'string' && event.id.trim()
+        && aiText(event.id) === event.id && typeof explanation.data?.summary === 'string'
+        && explanation.data.summary.trim() && aiText(explanation.data.summary) === explanation.data.summary) {
+        root.setAttribute('data-student-explanation-event', event.id);
+        aiLine(root, `사건 ID: ${event.id}`);
+        aiLine(root, `AI 설명: ${explanation.data.summary}`);
+        aiLine(root, `확인 시각: ${aiText(checkedAt)}`);
+        aiLine(root, 'AI 설명은 해석입니다. 기존 기록을 바꾸거나 제안을 자동 실행하지 않습니다.');
+      } else if (explanation?.status === 'error') {
+        aiFailure(root, explanation.error);
+        aiLine(root, '사건 설명을 확인하지 못했습니다. 기존 기록은 그대로입니다.');
+      } else if (explanation?.status === 'loading') aiLine(root, '선택한 사건 설명을 요청 중입니다. 기존 기록은 그대로입니다.');
+      else if (!explanation || explanation.status === 'idle') aiLine(root, '사건 설명 요청 전입니다. 기록에서 사건을 고르고 직접 설명을 요청하세요.');
+      else aiLine(root, '사건 설명 결과 확인 불가. 기존 기록은 그대로입니다.');
+      return root;
+    },
     renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
   };
 }
