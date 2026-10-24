@@ -344,21 +344,87 @@ export function createStudentView() {
     renderExplanation({ event, explanation, checkedAt } = {}) {
       const root = document.createElement('section');
       root.setAttribute('aria-label', '사건 AI 설명');
-      // 매번 새 DOM을 반환하므로 실패·취소·계정 변경 때 이전 사건의 성공 표식을 남기지 않는다.
-      if (explanation?.status === 'ok' && typeof event?.id === 'string' && event.id.trim()
-        && aiText(event.id) === event.id && typeof explanation.data?.summary === 'string'
-        && explanation.data.summary.trim() && aiText(explanation.data.summary) === explanation.data.summary) {
-        root.setAttribute('data-student-explanation-event', event.id);
-        aiLine(root, `사건 ID: ${event.id}`);
-        aiLine(root, `AI 설명: ${explanation.data.summary}`);
-        aiLine(root, `확인 시각: ${aiText(checkedAt)}`);
-        aiLine(root, 'AI 설명은 해석입니다. 기존 기록을 바꾸거나 제안을 자동 실행하지 않습니다.');
-      } else if (explanation?.status === 'error') {
+      // 제공 UI가 새 DOM으로 교체한다. 비성공 상태에는 과거 요약·성공 표식을 옮기지 않는다.
+      // 근거 부족 등으로 제공 UI가 event:null을 보내도 안전한 실패 원인이 먼저 보인다.
+      if (explanation?.status === 'error') {
+        aiLine(root, 'AI 설명 실패');
         aiFailure(root, explanation.error);
-        aiLine(root, '사건 설명을 확인하지 못했습니다. 기존 기록은 그대로입니다.');
-      } else if (explanation?.status === 'loading') aiLine(root, '선택한 사건 설명을 요청 중입니다. 기존 기록은 그대로입니다.');
-      else if (!explanation || explanation.status === 'idle') aiLine(root, '사건 설명 요청 전입니다. 기록에서 사건을 고르고 직접 설명을 요청하세요.');
-      else aiLine(root, '사건 설명 결과 확인 불가. 기존 기록은 그대로입니다.');
+        if (explanation.error?.code === 'ON_AI_INVALID_OUTPUT') aiLine(root, '근거가 맞지 않거나 AI가 이미 실행했다고 답한 설명은 사용할 수 없습니다.');
+        aiLine(root, '기존 기록은 그대로입니다. AI 연결·응답 문제는 과제 실패를 뜻하지 않습니다.');
+        return root;
+      }
+      if (!event) {
+        aiLine(root, '보안 기록에서 기록을 먼저 고르세요.');
+        return root;
+      }
+      if (explanation?.status !== 'ok') {
+        aiLine(root, explanation?.status === 'loading'
+          ? '선택한 사건 설명을 요청 중입니다. 기존 기록은 그대로입니다.'
+          : !explanation || explanation.status === 'idle'
+            ? '사건 설명 요청 전입니다. 선택한 기록에서 직접 설명을 요청하세요.'
+            : '사건 설명 결과 확인 불가. 기존 기록은 그대로입니다.');
+        return root;
+      }
+      const reject = reason => {
+        aiLine(root, 'AI 설명을 사용할 수 없습니다.');
+        aiFailure(root, { code: 'ON_AI_INVALID_OUTPUT', message: reason });
+        aiLine(root, '기록은 그대로입니다. 근거를 지어내거나 제안을 실행하지 않습니다.');
+        return root;
+      };
+      const readable = value => typeof value === 'string' && value.trim().length > 0
+        && aiText(value) === value && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);
+      const id = value => readable(value) && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/.test(value);
+      const rows = value => Array.isArray(value) && value.length > 0 && value.length <= 20
+        && value.every(row => row && id(row.id) && readable(row.text))
+        && new Set(value.map(row => row.id)).size === value.length;
+      const states = { access: ['allowed', 'denied', 'unknown'], session: ['active', 'expired', 'revoked', 'unknown'], device: ['compliant', 'noncompliant', 'unknown'] };
+      if (!id(event.id) || !rows(event.evidence) || !rows(event.rules)
+        || !Array.isArray(event.supportedActions) || !event.supportedActions.every(id)
+        || !Object.entries(states).every(([key, values]) => values.includes(event.state?.[key]))) {
+        return reject('사건 근거·규칙 자료가 없거나 사건 ID·현재 상태를 확인할 수 없습니다.');
+      }
+      const data = explanation.data;
+      const evidence = new Map(event.evidence.map(row => [row.id, row.text]));
+      const refs = value => Array.isArray(value) && value.length > 0
+        && new Set(value).size === value.length && value.every(ref => id(ref) && evidence.has(ref));
+      if (!data || !readable(data.summary) || !refs(data.evidenceIds) || data.evidenceIds.length !== evidence.size) {
+        return reject('근거가 맞지 않거나 부족합니다. 현재 사건의 모든 근거 ID와 설명을 확인할 수 없습니다.');
+      }
+      if (data.executed !== false || data.requiresHumanConfirmation !== true) {
+        return reject('AI가 이미 실행했다고 답했거나 사람 확인·미실행 상태를 확인할 수 없어 설명을 사용할 수 없습니다.');
+      }
+      if (!Array.isArray(data.proposals) || data.proposals.length > 3
+        || !data.proposals.every(proposal => proposal && id(proposal.action)
+          && event.supportedActions.includes(proposal.action) && refs(proposal.evidenceIds) && readable(proposal.reason))) {
+        return reject('제안의 지원 조치·근거·이유가 현재 사건과 맞지 않아 설명을 사용할 수 없습니다.');
+      }
+      root.setAttribute('data-student-explanation-event', event.id);
+      const heading = document.createElement('h3');
+      heading.textContent = 'AI 설명(참고용)';
+      root.appendChild(heading);
+      aiLine(root, `사건 ID: ${event.id}`);
+      if (explanation.mode === 'demo') aiLine(root, '예제 자료 · 실제 연결 아님');
+      aiLine(root, data.summary);
+      aiLine(root, 'AI 설명은 해석입니다. 사실 판단은 인용한 근거와 원천이 알려 준 현재 상태를 기준으로 하세요.');
+      aiLine(root, `확인 시각: ${aiText(checkedAt)}`);
+      aiLine(root, '인용한 근거');
+      for (const ref of data.evidenceIds) aiLine(root, `${ref} — ${evidence.get(ref)}`);
+      aiLine(root, '현재 규칙');
+      for (const rule of event.rules) aiLine(root, `${rule.id} — ${rule.text}`);
+      aiLine(root, '확인되지 않은 현재 상태');
+      const names = { access: '접속', session: '세션', device: '기기' };
+      const unknown = Object.keys(names).filter(key => event.state[key] === 'unknown');
+      for (const key of unknown) aiLine(root, `${names[key]}: 확인 불가(unknown)`);
+      if (unknown.length === 0) aiLine(root, '없음');
+      aiLine(root, '조치 제안');
+      if (data.proposals.length === 0) aiLine(root, event.supportedActions.length === 0
+        ? '원천이 지원하는 조치가 없어 제안이 없습니다(정상).'
+        : 'AI가 제안한 조치가 없습니다. 근거를 보고 담당자와 판단하세요.');
+      for (const proposal of data.proposals) {
+        aiLine(root, `${proposal.action} — ${proposal.reason}`);
+        aiLine(root, `제안 근거: ${proposal.evidenceIds.join(', ')}`);
+      }
+      aiLine(root, '제안은 사람 확인이 필요하며 실행되지 않았습니다. AI 설명은 기존 기록을 바꾸지 않습니다.');
       return root;
     },
     renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
