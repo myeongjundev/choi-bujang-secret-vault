@@ -1,0 +1,65 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { document, Element } from './dom.mjs';
+import { createStudentView } from '../extension.mjs';
+globalThis.document = document;
+const view = createStudentView();
+const ok = data => ({status:'ok',mode:'demo',data});
+const base = {devices:ok([{id:'fixture-pc',label:'합성PC',status:'noncompliant'}]),sessions:ok([{id:'fixture-session',status:'revoked'}]),notifications:[],diagnostics:{status:'idle'},mode:'demo'};
+const render = change => view.renderStatus({...base,...change});
+test('기기·현재 세션 상태와 원래 값, 알림 출처·코드·문구를 표시한다', () => {
+  const root=render({notifications:[{resource:'devices',code:'noncompliant',message:'합성 점검 필요'}]});
+  for(const s of ['합성PC','보안 기준 미충족(noncompliant)','fixture-session','철회됨(revoked)','현재 검증된 연결 하나','자료: devices','코드: noncompliant','합성 점검 필요']) assert.ok(root.textContent.includes(s));
+  assert.match(render().textContent,/주의할 알림이 없습니다/);
+});
+test('loading/빈 배열/오류/시간 초과와 성공 복구를 구분하고 옛 실패를 지운다', () => {
+  const loading=render({devices:{status:'loading',mode:'unknown'},sessions:{status:'loading',mode:'unknown'}}).textContent;
+  assert.match(loading,/기기 목록 불러오는 중/); assert.match(loading,/현재 세션 불러오는 중/);
+  const empty=render({devices:ok([]),sessions:ok([])}).textContent;
+  assert.match(empty,/등록된 기기가 없습니다/); assert.match(empty,/현재 연결이 없습니다/);
+  const fail={status:'error',mode:'disconnected',data:base.devices.data,error:{code:'REQUEST_TIMEOUT',message:'합성 시간 초과'}};
+  const failed=render({devices:fail,sessions:fail}).textContent;
+  assert.match(failed,/요청 시간 초과/); assert.match(failed,/다시 불러오기 버튼을 직접/);
+  assert.doesNotMatch(failed,/합성PC|등록된 기기가 없습니다/);
+  assert.doesNotMatch(render().textContent,/합성 시간 초과|불러오지 못했습니다/);
+});
+test('도움정보는 여섯 필드만 표시·사용자 클릭 후 복사하며 추가 비밀 필드를 제외한다', async () => {
+  const writes=[];
+  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{clipboard:{writeText:async text=>writes.push(text)}}});
+  const fakeSecret='fixture-private-value';
+  const diag={requestId:'fixture-request',component:'on-client',version:'0.2.11',checkedAt:'2026-10-19T01:00:00Z',engine:{mode:'demo',code:'ENGINE_DEMO',privateValue:fakeSecret},privateValue:fakeSecret};
+  const root=render({diagnostics:ok(diag)});
+  assert.equal(writes.length,0);
+  assert.doesNotMatch(root.textContent,new RegExp(fakeSecret));
+  for(const s of ['fixture-request','on-client','0.2.11','2026-10-19T01:00:00Z','demo','ENGINE_DEMO']) assert.ok(root.textContent.includes(s));
+  const button=root.all(e=>e.tag==='button' && e.textContent==='도움정보 복사')[0];
+  assert.equal(button.disabled,false);
+  await button.dispatch('click');
+  assert.equal(writes.length,1);
+  const result=JSON.parse(writes[0]);
+  assert.deepEqual(Object.keys(result),['requestId','component','version','checkedAt','engine']);
+  assert.deepEqual(result.engine,{mode:'demo',code:'ENGINE_DEMO'});
+  assert.ok(!writes[0].includes(fakeSecret));
+});
+test('복사 실패는 성공으로 표시하지 않고 필드 안의 비밀 모양 문자열도 제외한다', async () => {
+  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{clipboard:{writeText:async()=>{throw Error('fixture-denied');}}}});
+  const root=render({diagnostics:ok({requestId:'fixture-request',component:'Bearer fixture-value',version:'0.2.11',checkedAt:'2026-10-19T01:00:00Z',engine:{mode:'demo',code:'ENGINE_DEMO'}})});
+  assert.doesNotMatch(root.textContent,/Bearer fixture-value/); assert.match(root.textContent,/비밀값 제외/);
+  await root.all(e=>e.tag==='button')[0].dispatch('click');
+  assert.match(root.textContent,/복사하지 못했습니다/);
+  assert.doesNotMatch(root.textContent,/복사했습니다/);
+  assert.equal(render().all(e=>e.tag==='button')[0].disabled,true);
+});
+test('미지원 조치는 사건 상세 안의 비활성 버튼이며 요청을 보내지 않는다', () => {
+  const entry={id:'fixture-event',kind:'xdr',at:'2026-10-19T01:00:00Z',appId:'fixture-app',summary:'합성 경보',evidence:[],rules:[],state:{access:'unknown',session:'unknown',device:'unknown'},supportedActions:['isolate_device']};
+  const root=view.renderEvents(ok([entry]));
+  root.all(e=>e.tag==='button' && e.textContent==='fixture-event 상세')[0].dispatch('click');
+  const detail=root.all(e=>e.getAttribute('data-student-event-detail')==='fixture-event')[0];
+  const button=detail.all(e=>e.tag==='button' && e.textContent==='isolate_device 미지원')[0];
+  assert.equal(button.disabled,true); assert.deepEqual(button.listeners,{});
+  assert.match(detail.textContent,/조치 실행 연결은 준비 중/);
+  entry.supportedActions=[];
+  const empty=view.renderEvents(ok([entry]));
+  empty.all(e=>e.tag==='button')[0].dispatch('click');
+  assert.equal(empty.all(e=>e.tag==='button' && e.textContent.includes('미지원')).length,0);
+});

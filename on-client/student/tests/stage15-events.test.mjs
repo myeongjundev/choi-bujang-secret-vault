@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { document, Element } from './dom.mjs';
+import { createStudentView } from '../extension.mjs';
+globalThis.document = document;
+const view = createStudentView();
+const event = (id, kind, at, appId, access) => ({id,kind,at,appId,summary:`合成 <b>${id}</b>`,evidence:[{id:`e-${id}`,text:'합성 근거'}],rules:[{id:`r-${id}`,text:'합성 규칙'}],state:{access,session:'expired',device:'unknown'},supportedActions:[]});
+const records = [event('old','access','2026-10-18T01:00:00Z','app-a','allowed'),event('new','xdr','2026-10-19T01:00:00Z','app-b','denied'),event('legacy','access','2026-10-17T01:00:00Z',null,'unknown')];
+const render = data => view.renderEvents({status:'ok',mode:'demo',data});
+const rows = root => root.all(e => e.getAttribute('data-student-event-id') !== null);
+const button = (root,id) => root.all(e => e.tag==='button' && e.textContent===`${id} 상세`)[0];
+const select = (root,name,value) => { const s=root.all(e=>e.tag==='select' && e.getAttribute('aria-label')===name)[0]; s.value=value; s.dispatch('change'); };
+test('본인에게 전달된 목록만 복사 정렬하고 원본 시각·종류·앱을 표시한다', () => {
+  const root=render(records);
+  assert.deepEqual(rows(root).map(e=>e.getAttribute('data-student-event-id')),['new','old','legacy']);
+  assert.equal(records[0].id,'old');
+  assert.match(root.textContent,/2026-10-19T01:00:00Z/);
+  assert.match(root.textContent,/XDR 경보\(xdr\)/);
+  assert.match(root.textContent,/앱 확인 불가/);
+  assert.ok(root.textContent.includes('合成 <b>new</b>'));
+});
+test('세 필터를 결합해 목록을 걸러내고 상세에는 근거·규칙·세 상태를 분리한다', () => {
+  const root=render(records);
+  select(root,'기록 종류','xdr'); select(root,'업무 앱','app-b'); select(root,'접속 상태','denied');
+  assert.deepEqual(rows(root).map(e=>e.getAttribute('data-student-event-id')),['new']);
+  button(root,'new').dispatch('click');
+  const detail=root.all(e=>e.getAttribute('data-student-event-detail')==='new')[0];
+  for(const text of ['e-new: 합성 근거','r-new: 합성 규칙','거부됨(denied)','만료(expired)','확인 불가(unknown)','app-b']) assert.ok(detail.textContent.includes(text));
+  select(root,'접속 상태','allowed');
+  assert.equal(rows(root).length,0); assert.match(root.textContent,/조건에 맞는 기록이 없습니다/);
+  assert.equal(root.all(e=>e.getAttribute('data-student-event-detail')!==null).length,0);
+});
+test('새 자료/빈 배열/오류에서 이전 상세와 기록을 제거하고 실패와 빈 목록을 구분한다', () => {
+  const root=render(records); button(root,'old').dispatch('click');
+  assert.match(root.textContent,/e-old/);
+  const fresh=render([event('replacement','xdr','2026-10-19T02:00:00Z','app-c','unknown')]);
+  assert.doesNotMatch(fresh.textContent,/e-old|r-old/);
+  const empty=render([]); assert.match(empty.textContent,/표시할 기록이 없습니다/);
+  const failed=view.renderEvents({status:'error',mode:'unknown',data:records,error:{code:'CONTRACT_MISMATCH',message:'합성 형식 오류'}});
+  assert.match(failed.textContent,/기록을 불러오지 못했습니다: 합성 형식 오류/);
+  assert.doesNotMatch(failed.textContent,/표시할 기록이 없습니다|e-old|合成 <b>/);
+});
