@@ -320,7 +320,64 @@ export function createStudentView() {
       });
       return root;
     },
-    renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
+    renderVulnerabilities({ status = 'idle', mode, data, error } = {}) {
+      const root = document.createElement('section');
+      root.setAttribute('aria-label', '설치 패키지와 OSV 조회 결과');
+      if (mode === 'demo') aiLine(root, '예제 자료 · 실제 연결 아님');
+      if (status === 'idle' || status === 'loading') {
+        aiLine(root, status === 'idle' ? '패키지 조회 전(idle)' : '패키지 조회 중(loading)');
+        return root;
+      }
+      if (status === 'error') {
+        const codes = ['CANCELLED', 'REQUEST_CANCELLED', 'TIMEOUT', 'REQUEST_TIMEOUT', 'CONTRACT_MISMATCH',
+          'SERVICE_UNAVAILABLE', 'HOST_REJECTED', 'ORIGIN_REJECTED', 'REQUEST_INVALID'];
+        const known = codes.includes(error?.code);
+        aiLine(root, `조회 실패: ${known ? error.code : 'CONTRACT_MISMATCH'}`);
+        aiLine(root, known ? aiText(error.message) : '패키지 조회 응답을 확인할 수 없습니다.');
+        aiLine(root, '이전 결과는 현재 조회 결과가 아닙니다. 취소·오류 뒤에는 제공 화면의 설치 패키지 조회 버튼을 직접 눌러 다시 조회하세요.');
+        return root;
+      }
+      const scans = { complete: '모두 조회', partial: '일부 조회 실패', not_checked: '아직 조회 안 함',
+        not_configured: '조회 준비 미완료', unverifiable: 'lock 파일 확인 불가' };
+      const packages = { known_vulnerabilities: '알려진 항목 있음', none_found: '알려진 항목 없음', unverifiable: '조회 확인 불가' };
+      const safe = value => typeof value === 'string' && value.trim() && aiText(value) === value && !/[\u0000-\u001f\u007f]/.test(value);
+      const time = value => safe(value) && Number.isFinite(Date.parse(value));
+      const source = 'https://api.osv.dev/v1/querybatch';
+      const installed = value => safe(value) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(value);
+      const validRow = row => row && safe(row.name) && /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(row.name)
+        && installed(row.version) && Object.hasOwn(packages, row.status) && row.source === source && time(row.checkedAt)
+        && Array.isArray(row.vulnerabilities) && row.vulnerabilities.every(finding => finding && safe(finding.id)
+          && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(finding.id) && time(finding.modified))
+        && (row.status !== 'none_found' || row.vulnerabilities.length === 0)
+        && (row.status !== 'known_vulnerabilities' || row.vulnerabilities.length > 0);
+      const lockRequired = ['complete', 'partial', 'not_checked'].includes(data?.status);
+      if (status !== 'ok' || !data || !Object.hasOwn(scans, data.status) || !time(data.checkedAt)
+        || !Array.isArray(data.packages) || data.packages.length > 256 || !data.packages.every(validRow)
+        || (lockRequired && (![2, 3].includes(data.lockfileVersion) || !/^[0-9a-f]{64}$/.test(data.lockfileHash)))) {
+        aiLine(root, '조회 결과 확인 불가. 설치 버전·출처·조회 상태를 확인할 수 없어 현재 결과를 표시하지 않습니다.');
+        return root;
+      }
+      aiLine(root, `${scans[data.status]}(${data.status})`);
+      if ([2, 3].includes(data.lockfileVersion)) aiLine(root, `lockfileVersion: ${data.lockfileVersion}`);
+      if (typeof data.lockfileHash === 'string' && /^[0-9a-f]{64}$/.test(data.lockfileHash)) aiLine(root, `lockfileHash: ${data.lockfileHash}`);
+      aiLine(root, `전체 조회 시각: ${data.checkedAt}`);
+      if (data.packages.length === 0) aiLine(root, '표시할 패키지 조회 결과가 없습니다. 미설정·미조회·확인 불가는 안전 판정이 아닙니다.');
+      for (const item of data.packages) {
+        const row = document.createElement('article');
+        row.setAttribute('data-student-package-name', item.name);
+        row.setAttribute('data-student-package-version', item.version);
+        aiLine(row, `패키지: ${item.name}`);
+        aiLine(row, `정확한 설치 버전: ${item.version}`);
+        aiLine(row, `${item.status === 'unverifiable' && item.vulnerabilities.length > 0
+          ? '일부 확인·전체 조회 확인 불가' : packages[item.status]}(${item.status})`);
+        aiLine(row, `출처: ${item.source}`);
+        aiLine(row, `패키지 조회 시각: ${item.checkedAt}`);
+        for (const finding of item.vulnerabilities) aiLine(row, `취약점 ID: ${finding.id} · 수정 시각: ${finding.modified}`);
+        root.appendChild(row);
+      }
+      aiLine(root, '이 결과는 조회 시점의 공개 승인 패키지 범위입니다. 모든 취약점이나 시스템 전체의 안전을 보증하지 않습니다.');
+      return root;
+    },
     renderAiConnection({ status, mode, data, error, checkedAt } = {}) {
       const root = document.createElement('section');
       root.setAttribute('aria-label', 'AI 연결 점검 결과');
