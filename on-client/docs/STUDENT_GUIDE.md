@@ -6,7 +6,7 @@
 
 Git과 Node.js가 설치된 PC에서 아직 존재하지 않는 빈 작업 경로를 선택한다. 기존 프로젝트 폴더에 다시 내려받거나 덮어쓰지 않는다. 이 앱에는 외부 npm 의존성이 없어 npm install이 필요하지 않다.
 
-실측 환경은 Windows PowerShell과 Git 2.53.0.windows.2다. 다른 OS에서의 실행은 미확인이다. clone을 실행할 부모 폴더에서 PowerShell을 연 뒤 아래 명령을 순서대로 실행한다. `Set-Location` 이후에는 저장소 최상위가 작업 위치다.
+선언 지원 버전은 on-client/package.json의 engines.node에 적힌 Node 24.19.0 한 버전이다. 이번 실측은 Windows PowerShell·Git 2.53.0.windows.2·Node 24.15.0에서 수행한 선언 범위 밖의 참고 진단이다. Node 24.19.0 및 다른 OS의 실제 실행은 미확인이다. clone을 실행할 부모 폴더에서 PowerShell을 연 뒤 아래 명령을 순서대로 실행한다. `Set-Location` 이후에는 저장소 최상위가 작업 위치다.
 
 ```powershell
 git clone https://github.com/myeongjundev/choi-bujang-secret-vault.git keshev-clean
@@ -16,7 +16,15 @@ npm --prefix on-client run check
 node --test "on-client/student/tests/*.test.mjs"
 ```
 
-실측 Node는 v24.15.0이며 제공 시작 틀 권장은 24.19.0이다. npm check는 문법 검사만 한다. 뒤 명령은 현재 소스 하나로 13~20단계 학생 함수의 정상·실패·보안 경로 38개를 검사하며, 실제 원천 연결 검사는 아니다. `.env`나 인증서·비밀값을 원본 폴더에서 복사하지 않는다.
+실측 Node는 v24.15.0이다. npm check는 문법 검사만 한다. 뒤 명령은 현재 소스 하나로 13~20단계 학생 함수의 정상·실패·보안 경로 38개를 검사하며, 실제 원천 연결 검사는 아니다. `.env`나 인증서·비밀값을 원본 폴더에서 복사하지 않는다.
+
+| 버전 근거 | 의미 |
+| --- | --- |
+| on-client/package.json: engines.node=24.19.0 | 이 앱의 제공 선언 지원 버전. 이번 실제 실행은 미확인 |
+| tools/start-alekov.ps1: major 22~24 허용 | 제공 공통 실행 도구의 입력 검사 범위. 학생 앱의 지원 범위를 확장하지 않음. 이번 실행은 Node 직접 명령 사용 |
+| 이번 실측 Node v24.15.0 | 38개 시험·기본/예제 실행·재시작의 참고 관측. 공식 지원 버전 검증으로 세지 않음 |
+
+제공 package.json·실행 도구를 수정하지 않고 위 차이를 미해결 제한으로 기록한다. 학생 문서는 Node 22~24 전체의 지원이나 Node 24.19.0 실측 성공을 선언하지 않는다.
 
 ```text
 keshev-clean/                   ← PowerShell 작업 위치

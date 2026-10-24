@@ -1,0 +1,35 @@
+{
+  "mode": "disconnected",
+  "checkedAt": "2026-10-24T07:42:37.717Z",
+  "resources": {
+    "me": {
+      "ok": false,
+      "code": "ENGINE_NOT_CONNECTED"
+    },
+    "apps": {
+      "ok": false,
+      "code": "ENGINE_NOT_CONNECTED"
+    },
+    "devices": {
+      "ok": false,
+      "code": "ENGINE_NOT_CONNECTED"
+    },
+    "sessions": {
+      "ok": false,
+      "code": "ENGINE_NOT_CONNECTED"
+    },
+    "events": {
+      "ok": false,
+      "code": "ENGINE_NOT_CONNECTED"
+    }
+  },
+  "ai": {
+    "configured": false,
+    "authorized": false,
+    "modelCall": "not executed"
+  },
+  "vulnerabilities": {
+    "status": "not_configured",
+    "packageCount": 0
+  }
+}

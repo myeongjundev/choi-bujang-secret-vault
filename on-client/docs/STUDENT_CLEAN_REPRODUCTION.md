@@ -5,14 +5,26 @@
 ## 소스와 실행 환경
 
 - 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault, 브랜치 main. 기존 1~12단계와 같은 저장소에 on-client를 추가한 구성이다.
-- 검증 커밋: `62e9fecb8cfcefbb8e728346f9441d5a466b0a68`.
+- 최종 실행 검증을 완료한 커밋: `f4ff1b1e9d19f422d2fa2cf145e319c3ca296f03`.
 - 학생 실행 모듈 Git blob: `3f10cf5daf4dffcff543e29c889ec22ce4532df3`. 원래 작업 폴더와 새 복제에서 일치했다.
-- 실제 Node v24.15.0, Git 2.53.0.windows.2, Windows PowerShell. 제공 시작 틀 0.2.11, 권장 Node 24.19.0과 실측 차이를 보존한다.
+- 실제 Node v24.15.0, Git 2.53.0.windows.2, Windows PowerShell. 제공 시작 틀 0.2.11. package.json의 선언 지원 버전은 Node 24.19.0 한 버전이며, 이번 Node 24.15.0 실행은 선언 범위 밖 참고 진단이다. Node 24.19.0 실측은 미확인이다.
 - npm 문법 검사 통과, 같은 소스의 `node --test "on-client/student/tests/*.test.mjs"` 38/38 통과. 서로 다른 과거 소스의 결과를 합친 것이 아니다.
 - 16:32 KST에 새 복제를 문서 결합 커밋 `ceb303c7cf6606a4e95bdd78533acc664b5c23f6`으로 fast-forward한 뒤 같은 38개 누적 시험과 예제 HTTP 확인을 다시 통과했다. 실행 모듈 Git blob은 위 값과 같고 제공 src/public/vendor/tools 및 학생 시험에도 차이가 없었다. 이후 인수인계 문서 보완은 실행 코드·시험 소스를 바꾸지 않는다.
 - 실행은 설명서의 `node on-client/src/server.mjs` 및 `--demo`, 주소는 http://127.0.0.1:5189/.
 
-최종 제출의 40자리 해시는 상황실에 입력한 커밋을 기준으로 한다. 위 62e9fec/ceb303c는 실제 누적 실행을 확인한 불변 저장점이다. 이번 22단계의 보완은 재현·보존·버전 문서만 변경하며, 실행 모듈·제공 코드·38개 시험은 위 Git 객체와 같다. 최종 후보도 별도의 새 폴더에 받아 같은 누적 시험과 실행 응답을 확인한 뒤 제출한다. 과거의 서로 다른 코드 시험을 합산하지 않는다.
+최종 후보 f4ff1b1을 **새 빈 폴더 keshev-final에 clone하고 그 40자리 해시로 detached checkout한 뒤 실제 검증을 완료했다.** 16:42~16:43 KST에 문법 검사·같은 소스의38개 시험·기본 실행·예제 실행·Chrome 표시·종료와 재시작을 확인했다. 아래 표는 이 최종 후보에서 직접 관찰한 결과다. 이전 62e9fec/ceb303c 결과를 합산한 표가 아니다.
+
+현재 문서 보완은 위 후보에서 완료한 관찰 기록과 지원 버전 제한을 제출 원문에 포함한다. 실행 모듈·제공 코드·시험은 그대로다. 현재 제출본의 여덟 학생 함수는 동일 Git blob 3f10cf5daf4dffcff543e29c889ec22ce4532df3이고38개 시험도 동일하다. 실제 실행 원본 증거를 `student/verification/`에 포함했다. 이 기록은 학생 측 로컬 실행 관측이며 서버의 실행 인증이 아니다.
+
+| 포함 증거 | 내용 |
+| --- | --- |
+| student/verification/verified-source.json | 실제 고정 커밋 f4ff1b1, 새 clone과 원본의 전체 tree 일치·작업 트리·환경파일 없음 |
+| student/verification/cumulative-tests.txt | 같은 최종 소스의38개 통과·0실패 출력 |
+| student/verification/disconnected.json | 16:42 기본 실행: 다섯 자원 ENGINE_NOT_CONNECTED, AI 미구성, 패키지 미설정 |
+| student/verification/demo.json | 16:43 예제 실행: 다섯 자원과 세 앱 판정 |
+| student/verification/restart.json | 같은 커밋 재시작 뒤 동일 관측 |
+
+실제로 실행한 고정 절차는 새 부모 폴더에서 git clone → 새 저장소로 이동 → `git checkout --detach f4ff1b1e9d19f422d2fa2cf145e319c3ca296f03` → `node --version` → npm 문법 검사 → 38개 시험 → 기본 서버 → 종료 → 예제 서버 → 브라우저 확인 → 종료·동일 명령 재시작 순서였다. 비밀 설정을 복사하지 않았다.
 
 ## 확인 표
 
@@ -20,19 +32,19 @@
 
 | 단계 | 확인한 기능 | 결과 | 확인 시각(KST) | 비고 |
 | --- | --- | --- | --- | --- |
-| 13 | 실제 사용자·기기·세션 | 연결 없음 | 10/24 16:25~16:27 | 기본 실행에서 ENGINE_NOT_CONNECTED. 예제 자료의 practice-user·기기 unknown·세션 active 표시는 확인 |
-| 14 | 운영 업무 앱 판정 | 연결 없음 | 10/24 16:25~16:28 | 예제 자료 library allow·repository deny·approval challenge는 HTTP와 Chrome에서 확인 |
-| 15 | 운영 접속·XDR 기록 | 연결 없음 | 10/24 16:25~16:28 | 예제 자료 event-01의 근거 e-01·규칙 rule-01·unknown 상세 확인. 신규 운영 탐지 아님 |
-| 16 | 운영 상태·알림·도움정보 | 연결 없음 | 10/24 16:25~16:28 | 예제 자료 상태·알림과 로컬 공개 도움정보 불러오기 확인. clipboard 내용 자체는 이번 새 폴더에서 미확인 |
-| 17 | 실제 AI 연결·모델 응답 | 확인 불가 | 10/24 16:25~16:28 | diagnostics의 configured:false·authorized:false. 실제 모델 요청 미실행 |
-| 18 | 실제 사건 AI 생성 | 확인 불가 | 10/24 16:27 | 미구성 상태 설명 요청 1회: ON_AI_PROVISIONING_PENDING. 합성 정상·근거 불일치·unknown 시험은 통과 |
-| 19 | 실제 조치 준비·확인·집행·효과 조회 | 확인 불가 | 10/24 16:27~16:28 | 예제 자료 supportedActions 빈 배열, 학생 미실행(idle). 합성 상태·ACK·효과 검증 통과, 실제 조치 요청 없음 |
-| 20 | 실제 프로젝트 설치 버전과 OSV | 확인 불가 | 10/24 16:26~16:28 | 실제 화면 not_configured, 패키지0개. 합성 exact version·부분 ID 보존 시험 통과 |
-| 21 | 설명서의 경로·명령·로컬 앱 응답 | 재현됨 | 10/24 16:24~16:28 | 새 복제에서 문법 검사·38개 시험·기본/예제 시작·Ctrl+C 종료·재시작 확인. 구성도 외부 두 시스템은 미확인 |
+| 13 | 실제 사용자·기기·세션 | 연결 없음 | 10/24 16:42~16:43 | 기본 실행 ENGINE_NOT_CONNECTED. 예제 자료 practice-user와 신원 표시를 Chrome에서 확인 |
+| 14 | 운영 업무 앱 판정 | 연결 없음 | 10/24 16:42~16:43 | 예제 HTTP library allow·repository deny·approval challenge 확인. UI 상태는 같은 소스 합성 시험 |
+| 15 | 운영 접속·XDR 기록 | 연결 없음 | 10/24 16:42~16:43 | 예제 자료 event-01 목록을 Chrome에서 확인. 상세·필터·근거는 같은 소스 합성 시험 |
+| 16 | 운영 상태·알림·도움정보 | 연결 없음 | 10/24 16:42~16:43 | 기본·예제 신원/상태와 알림 화면, 합성 상태·도움정보 시험 통과. 최종 후보 clipboard 내용은 미확인 |
+| 17 | 실제 AI 연결·모델 응답 | 확인 불가 | 10/24 16:42~16:43 | diagnostics의 configured:false·authorized:false. 실제 모델 요청 미실행 |
+| 18 | 실제 사건 AI 생성 | 확인 불가 | 10/24 16:42~16:43 | 최종 후보에서 실제 모델 요청 미실행. 같은 소스 합성 정상·근거 불일치·unknown 시험 통과 |
+| 19 | 실제 조치 준비·확인·집행·효과 조회 | 확인 불가 | 10/24 16:43 | 예제 자료 supportedActions 빈 배열, Chrome 미실행(idle). 합성 ACK·효과 검증 통과, 실제 조치 요청 없음 |
+| 20 | 실제 프로젝트 설치 버전과 OSV | 확인 불가 | 10/24 16:42~16:43 | HTTP not_configured·패키지0개. 같은 소스 합성 exact version·부분 ID 보존 시험 통과 |
+| 21 | 설명서의 경로·명령·로컬 앱 응답 | 재현됨 | 10/24 16:42~16:43 | 새 복제의 문법·38개 시험·기본/예제 시작·종료·재시작 확인. 외부 두 시스템·선언 지원 Node 24.19.0 실측은 미확인 |
 
 ## 종료와 재시작
 
-예제 서버를 Ctrl+C로 종료한 뒤 같은 새 복제에서 같은 `--demo` 명령으로 다시 켰다. 16:28 KST에 5개 자원 응답과 세 앱 판정을 다시 확인했다. 최초 실행과 재시작의 자원 수·판정·AI 미구성·패키지 미설정이 같았다. Chrome 재로드 뒤 이전 AI 오류가 사라지고 설명은 기록 선택 안내, 조치는 미실행(idle)로 돌아왔다.
+최종 후보 예제 서버를 Ctrl+C로 종료한 뒤 같은 새 복제에서 같은 `--demo` 명령으로 다시 켰다. 16:43 KST에 5개 자원 응답과 세 앱 판정을 다시 확인했다. 최초 실행과 재시작의 자원 수·판정·AI 미구성·패키지 미설정이 같았다. 앞선 ceb303c 진단에서는 Chrome 재로드 뒤 이전 AI 오류 제거와 설명/조치 초기화도 확인했으며, 이 관측은 최종 후보 표와 구분한다.
 
 ## 보존·제약·인수인계
 

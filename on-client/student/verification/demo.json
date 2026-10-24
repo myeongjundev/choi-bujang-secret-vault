@@ -1,0 +1,49 @@
+{
+  "mode": "demo",
+  "checkedAt": "2026-10-24T07:43:00.013Z",
+  "resources": {
+    "me": {
+      "ok": true,
+      "count": 1
+    },
+    "apps": {
+      "ok": true,
+      "count": 3
+    },
+    "devices": {
+      "ok": true,
+      "count": 1
+    },
+    "sessions": {
+      "ok": true,
+      "count": 1
+    },
+    "events": {
+      "ok": true,
+      "count": 1
+    }
+  },
+  "ai": {
+    "configured": false,
+    "authorized": false,
+    "modelCall": "not executed"
+  },
+  "vulnerabilities": {
+    "status": "not_configured",
+    "packageCount": 0
+  },
+  "decisions": [
+    {
+      "appId": "library",
+      "decision": "allow"
+    },
+    {
+      "appId": "repository",
+      "decision": "deny"
+    },
+    {
+      "appId": "approval",
+      "decision": "challenge"
+    }
+  ]
+}

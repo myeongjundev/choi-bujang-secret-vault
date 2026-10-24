@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/myeongjundev/choi-bujang-secret-vault",
+  "branch": "main",
+  "submitted_commit": "f4ff1b1e9d19f422d2fa2cf145e319c3ca296f03",
+  "original_commit": "f4ff1b1e9d19f422d2fa2cf145e319c3ca296f03",
+  "fresh_clone_commit": "f4ff1b1e9d19f422d2fa2cf145e319c3ca296f03",
+  "same_complete_git_tree": true,
+  "git_tree": "e05a8358a9b33f13765d01e5a1d9ecfb060e4c63",
+  "student_module_blob": "3f10cf5daf4dffcff543e29c889ec22ce4532df3",
+  "original_worktree_clean": true,
+  "fresh_clone_worktree_clean": true,
+  "fresh_root_env_exists": false,
+  "fresh_client_env_exists": false,
+  "tests": {
+    "total": 38,
+    "passed": 38
+  },
+  "runtime_evidence": [
+    "stage22-final-disconnected.json",
+    "stage22-final-demo.json",
+    "stage22-final-restart.json",
+    "stage22-final-browser.txt"
+  ]
+}
