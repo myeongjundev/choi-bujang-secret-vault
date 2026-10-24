@@ -427,6 +427,68 @@ export function createStudentView() {
       aiLine(root, '제안은 사람 확인이 필요하며 실행되지 않았습니다. AI 설명은 기존 기록을 바꾸지 않습니다.');
       return root;
     },
-    renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
+    renderAction({ status = 'idle', event, actionId, target, receipt, observation, message, confirmationExpiresAt, error } = {}) {
+      const root = document.createElement('section');
+      root.setAttribute('aria-label', '조치 요청 상태와 관측 결과');
+      const id = value => typeof value === 'string' && aiText(value) === value && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(value);
+      const time = value => typeof value === 'string' && aiText(value) === value && Number.isFinite(Date.parse(value));
+      const labels = {
+        idle: '아직 미실행(idle). AI 제안만으로 조치가 실행되지는 않습니다.',
+        loading: '조치 준비 또는 결과 조회 중(loading). 결과를 기다립니다.',
+        prepared: '준비됨·미실행(prepared). 실제 대상과 확인 기한을 읽고 사람 확인이 필요합니다.',
+        executing: '서버에 전달 중(executing). 처리 결과를 기다립니다.',
+        pending: '서버 접수·처리 중(pending). 접수 응답(ACK)은 효과 확인이 아닙니다.',
+        succeeded: '효과 확인(succeeded). 연동 시스템에서 조회한 관측 결과입니다.',
+        denied: '거절(denied). 연동 시스템이 조치를 거절했습니다.',
+        failed: '실패(failed). 연동 시스템에서 실패를 반환했습니다.',
+        expired: '확인 기한 지남(expired). 제공 화면에서 다시 준비하세요.',
+        error: '요청 처리 안 됨(error). 안전한 오류와 연결 상태를 확인하세요.',
+        unknown: '결과 불명(unknown). 성공 또는 효과 없음으로 단정할 수 없습니다. 제공 화면에서 결과만 직접 재조회하세요.',
+      };
+      const bound = id(event?.id) && (!receipt?.eventId || receipt.eventId === event.id)
+        && (!receipt?.actionId || receipt.actionId === actionId);
+      let current = Object.hasOwn(labels, status) ? status : 'unknown';
+      if (receipt && !bound) current = 'unknown';
+      if (current === 'succeeded' && !(observation?.effectApplied === true && time(observation.observedAt)
+        && id(receipt?.receiptId) && id(receipt?.requestId) && bound)) current = 'unknown';
+      aiLine(root, labels[current]);
+      if (current === 'idle') {
+        aiLine(root, '조치 준비·집행·결과 조회는 제공 화면에서 직접 조작합니다. 이 학생 영역은 요청을 전송하지 않습니다.');
+        if (typeof message === 'string' && message.trim()) aiLine(root, aiText(message));
+        return root;
+      }
+      if (bound) {
+        aiLine(root, `사건 ID: ${event.id}`);
+        for (const row of Array.isArray(event.evidence) ? event.evidence : []) if (id(row?.id)) aiLine(root, `근거 ID: ${row.id}`);
+        if (id(actionId)) aiLine(root, `조치 ID: ${actionId}`);
+        if (id(target?.id)) aiLine(root, `실제 대상 ID: ${target.id}`);
+        if (Number.isSafeInteger(target?.generation) && target.generation > 0) aiLine(root, `대상 세대(generation): ${target.generation}`);
+        if (id(receipt?.requestId)) {
+          root.setAttribute('data-student-action-event', event.id);
+          root.setAttribute('data-student-action-request', receipt.requestId);
+          aiLine(root, `요청 ID(requestId): ${receipt.requestId}`);
+        }
+        if (id(receipt?.receiptId)) aiLine(root, `접수 ID(receiptId): ${receipt.receiptId}`);
+        if (Number.isSafeInteger(receipt?.version) && receipt.version > 0) aiLine(root, `접수 버전(version): ${receipt.version}`);
+        if (current === 'prepared' || current === 'expired') aiLine(root, `확인 기한: ${time(confirmationExpiresAt) ? confirmationExpiresAt : '확인 불가'}`);
+      } else if (receipt) aiLine(root, '사건·조치와 접수 정보가 맞지 않아 이전 대상이나 결과를 표시하지 않습니다.');
+      if (current === 'succeeded') {
+        aiLine(root, `관측 시각: ${observation.observedAt}`);
+        aiLine(root, 'effectApplied: true');
+      }
+      if (['denied', 'failed', 'expired'].includes(current) && typeof message === 'string' && message.trim()) aiLine(root, aiText(message));
+      if (current === 'error') {
+        const codes = ['ACTION_UNSUPPORTED', 'ACTION_DENIED', 'ACTION_INPUT_INVALID', 'ACTION_CONFIRMATION_EXPIRED',
+          'ACTION_CONFIRMATION_INVALID', 'ACTION_SCOPE_CHANGED', 'ACTION_SCOPE_UNVERIFIED', 'SUBJECT_SCOPE_UNVERIFIED',
+          'ACTION_SNAPSHOT_CHANGED', 'ACTION_EVENT_UNAVAILABLE', 'ACTION_TIMEOUT', 'ACTION_CANCELLED',
+          'ACTION_STORE_FAILED', 'ACTION_RESULT_UNVERIFIED', 'REQUEST_TIMEOUT', 'REQUEST_CANCELLED', 'CANCELLED', 'SERVICE_UNAVAILABLE'];
+        const known = codes.includes(error?.code);
+        aiLine(root, `오류 코드: ${known ? error.code : 'ACTION_RESULT_UNVERIFIED'}`);
+        aiLine(root, known ? aiText(error.message) : '조치 처리 결과를 확인할 수 없습니다.');
+      }
+      if (Array.isArray(event?.supportedActions) && event.supportedActions.length === 0) aiLine(root, '연동 시스템이 지원하는 조치가 없어 준비·집행 버튼이 없는 것이 정상입니다.');
+      aiLine(root, '새 집행 요청을 자동으로 보내지 않습니다. 조치 화면 취소는 이미 전달된 효과를 되돌리는 기능이 아닙니다.');
+      return root;
+    },
   };
 }
