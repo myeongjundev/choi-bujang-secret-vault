@@ -4,6 +4,16 @@
 
 저장소: https://github.com/myeongjundev/choi-bujang-secret-vault
 
+## 케셰브 보안 Agent · 13~22단계 학생 안내
+
+`on-client/`는 직원이 자기 로그인·기기·세션, 업무 앱 판정, 접속·XDR 기록을 확인하는 로컬 보안 앱이다. 학생 화면 8개 함수에는 AI 참고 설명·조치 처리 상태·정확한 패키지 버전과 OSV 결과 표시도 포함한다. 학생 구현은 **v0.9 검증 중**, 제공 시작 틀은 0.2.11이다. 현재 13~20단계 공식 통과이며 실제 운영 연결·조치 실행은 미확인이다.
+
+실측 지원 환경은 Windows PowerShell, Git 2.53.0.windows.2, Node v24.15.0이다. 시작 틀 권장은 Node 24.19.0이다. 이 저장소 최상위의 PowerShell에서 `npm --prefix on-client run check`, `node --test "on-client/student/tests/*.test.mjs"`, `node on-client/src/server.mjs`를 실행한다. 브라우저 주소는 http://127.0.0.1:5189/ 이다. 기본 실행은 연결 없음이며 예제 실행은 `node on-client/src/server.mjs --demo`다. 종료는 실행 터미널의 Ctrl+C다.
+
+설치·폴더 구조·실행·종료·재시작·구성도·제공/학생 경계·오류별 확인 순서는 [학생 설명서](on-client/docs/STUDENT_GUIDE.md), 동일 소스의 새 복제 결과는 [새 폴더 재현 기록](on-client/docs/STUDENT_CLEAN_REPRODUCTION.md), 버전·미확인 범위는 [학생 버전 기록](on-client/student/RELEASE.md)을 읽는다. 로컬 앱은 외부 npm 의존성이 없다.
+
+아래 기존 자료실 설명과 npm ci·Vercel 절차는 1~12단계 자료실의 기록이다. 기존 자료실·DB·인증 설정·성취 기록은 보존한다.
+
 ## 출처
 
 | 출처 | 담당 구성 요소 |
