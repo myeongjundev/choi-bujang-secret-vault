@@ -1,0 +1,19 @@
+.local-pc { margin-top:24px; padding:20px; border:2px solid #4363b2; border-radius:12px; background:#f8faff; color:#172b4d; }
+.local-pc h3 { font-size:1.2rem; margin-bottom:8px; }
+.local-pc h4 { margin:20px 0 8px; color:#172b4d; }
+.local-pc p { margin:8px 0; }
+.local-pc .pc-toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:16px 0; }
+.local-pc button { background:#234db0; color:white; border:0; border-radius:6px; padding:10px 16px; cursor:pointer; }
+.local-pc button:disabled { background:#66748c; cursor:wait; }
+.local-pc button:focus-visible { outline:3px solid #9b5000; outline-offset:3px; box-shadow:none; }
+.local-pc .pc-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:16px 0; }
+.local-pc .pc-card { border:1px solid #c6d2e8; background:white; padding:16px; border-radius:8px; }
+.local-pc .pc-card h4 { margin:0 0 8px; }
+.local-pc .pc-value { font-size:1.55rem; font-weight:700; margin:4px 0; }
+.local-pc .pc-note { font-size:.88rem; color:#465675; }
+.local-pc .pc-warn { color:#784300; background:#fff1d6; border-radius:6px; padding:10px; }
+.local-pc table { width:100%; border-collapse:collapse; background:white; margin:12px 0; }
+.local-pc th,.local-pc td { border:1px solid #ccd5e4; text-align:left; padding:8px; vertical-align:top; }
+.local-pc caption { text-align:left; font-weight:600; padding:8px 0; }
+.local-pc .pc-table-wrap { overflow:auto; }
+@media (max-width:1100px) { .local-pc .pc-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }

@@ -1,6 +1,191 @@
 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다.
 // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다.
+const PC_SOURCES = {
+  cpu:'Node os.cpus interval', memory:'Node os.totalmem/freemem', disk:'Node fs.statfs project volume',
+  network:'Node os.networkInterfaces address configuration', firewall:'Windows Get-NetFirewallProfile ActiveStore',
+  systemLog:'Windows Get-WinEvent System', applicationLog:'Windows Get-WinEvent Application',
+};
+const PC_REASONS = {
+  PC_ACCESS_DENIED:'현재 일반 권한으로 읽을 수 없습니다. 권한을 높이거나 설정을 바꾸지 않습니다.',
+  PC_QUERY_FAILED:'이 항목을 읽지 못했습니다. 잠시 뒤 직접 다시 조회하세요.',
+  PC_TIMEOUT:'조회 시간이 초과됐습니다. 현재 결과는 확인 불가입니다.',
+  PC_UNSUPPORTED:'이 운영체제에서 지원하지 않는 조회입니다.',
+  PC_INVALID_DATA:'조회 결과의 형식이나 단위를 확인하지 못했습니다.',
+  PC_CANCELLED:'조회를 취소했습니다. 도착이 늦은 결과는 표시하지 않습니다.',
+  LOCAL_RUNTIME_REQUIRED:'학생 PC 조회 실행 명령(node student/run-local-pc.mjs)으로 앱을 켠 뒤 다시 조회하세요.',
+  LOCAL_READ_FAILED:'로컬 조회 서버를 확인하고 직접 다시 조회하세요.',
+};
+
+// 학생 조회 계약이다. 기존 엔진/AI/승인 host의 제공 계약을 바꾸지 않는다.
+export function validateLocalPcSnapshot(data) {
+  const date = s => typeof s === 'string' && Number.isFinite(Date.parse(s));
+  const n = x => Number.isFinite(x) && x >= 0;
+  const integer = x => Number.isSafeInteger(x) && x >= 0;
+  const percent = x => n(x) && x <= 100;
+  const bad = () => { throw Error('PC_INVALID_DATA'); };
+  if (data?.schema !== 'keshev.student.local-pc.v1' || data.evidence !== 'measured-local' ||
+      !date(data.startedAt) || !date(data.checkedAt) || Date.parse(data.startedAt) > Date.parse(data.checkedAt)) bad();
+  const out = {schema:data.schema,evidence:data.evidence,startedAt:data.startedAt,checkedAt:data.checkedAt,resources:{}};
+  for (const key of Object.keys(PC_SOURCES)) {
+    const r = data.resources?.[key];
+    if (!r || r.source !== PC_SOURCES[key] || !date(r.checkedAt) || !['ok','unavailable'].includes(r.state)) bad();
+    const base = {state:r.state,source:r.source,checkedAt:r.checkedAt};
+    if (r.state === 'unavailable') {
+      out.resources[key] = {...base,code:Object.hasOwn(PC_REASONS,r.code) ? r.code : 'PC_QUERY_FAILED'};
+      continue;
+    }
+    if (key === 'cpu') {
+      if (!percent(r.percent) || !integer(r.intervalMs) || r.intervalMs < 1 || r.intervalMs > 30000) bad();
+      out.resources[key] = {...base,percent:r.percent,intervalMs:r.intervalMs};
+    } else if (key === 'memory') {
+      if (!n(r.totalBytes) || r.totalBytes <= 0 || !n(r.usedBytes) || r.usedBytes > r.totalBytes ||
+          !percent(r.percent) || Math.abs(r.percent-r.usedBytes/r.totalBytes*100) > 0.15) bad();
+      out.resources[key] = {...base,totalBytes:r.totalBytes,usedBytes:r.usedBytes,percent:r.percent};
+    } else if (key === 'disk') {
+      if (!n(r.totalBytes) || r.totalBytes <= 0 || !n(r.availableBytes) || r.availableBytes > r.totalBytes || r.scope !== 'project-volume') bad();
+      out.resources[key] = {...base,totalBytes:r.totalBytes,availableBytes:r.availableBytes,scope:r.scope};
+    } else if (key === 'network') {
+      if (!Array.isArray(r.interfaces) || r.interfaces.length > 128 || r.interfaces.some(i => !integer(i?.ipv4) || !integer(i?.ipv6))) bad();
+      out.resources[key] = {...base,interfaces:r.interfaces.map((i,index) => ({label:'인터페이스 '+(index+1),ipv4:i.ipv4,ipv6:i.ipv6}))};
+    } else if (key === 'firewall') {
+      if (!Array.isArray(r.profiles) || r.profiles.length !== 3 || new Set(r.profiles.map(p=>p?.profile)).size !== 3 ||
+          r.profiles.some(p => !['Domain','Private','Public'].includes(p?.profile) || p.enabled !== null && typeof p.enabled !== 'boolean')) bad();
+      out.resources[key] = {...base,profiles:r.profiles.map(p => ({profile:p.profile,enabled:p.enabled}))};
+    } else {
+      if (!integer(r.errors) || !integer(r.warnings) || r.errors+r.warnings > 5000 || r.limit !== 5000 ||
+          typeof r.truncated !== 'boolean' || !date(r.windowStart) ||
+          Date.parse(r.windowStart) > Date.parse(r.checkedAt) || Date.parse(r.checkedAt)-Date.parse(r.windowStart)>25*3600000) bad();
+      out.resources[key] = {...base,errors:r.errors,warnings:r.warnings,limit:5000,truncated:r.truncated,windowStart:r.windowStart};
+    }
+  }
+  return out;
+}
+
+export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
+  let phase='idle', snapshot=null, reason=null, generation=0, controller=null, timer=null, refs=null, mode='unknown';
+  const history=[];
+  const add = (parent,tag,text='') => {
+    const el=document.createElement(tag);el.textContent=String(text);parent.appendChild(el);return el;
+  };
+  const at = s => new Date(s).toLocaleString('ko-KR',{hour12:false});
+  const gib = bytes => (bytes/1024**3).toFixed(2);
+  const unavailable = (parent,r) => add(parent,'p','확인 불가 · '+(PC_REASONS[r?.code] || PC_REASONS.PC_QUERY_FAILED)).setAttribute('class','pc-warn');
+  async function read(signal) {
+    if (readSnapshot) return readSnapshot({signal});
+    const response = await fetch('/api/student/local-pc',{headers:{'X-Keshev-Local-Read':'1'},credentials:'omit',cache:'no-store',redirect:'error',signal});
+    if (response.status === 404) throw Error('LOCAL_RUNTIME_REQUIRED');
+    if (!response.ok || !(response.headers.get('content-type') || '').startsWith('application/json')) throw Error('LOCAL_READ_FAILED');
+    const body=await response.json();
+    if (body?.ok !== true) throw Error('LOCAL_READ_FAILED');
+    return body.data;
+  }
+  function draw() {
+    if (!refs) return;
+    refs.refresh.disabled=phase==='loading';
+    refs.refresh.textContent=history.length ? 'PC 상태 다시 조회' : 'PC 상태 조회';
+    refs.cancel.disabled=phase!=='loading';
+    refs.root.setAttribute('aria-busy',String(phase==='loading'));
+    refs.body.replaceChildren();
+    const connection = mode==='connected' ? 'SDP 연결 모드 · 제공 서버 응답 기준' :
+      mode==='demo' ? 'SDP 예제 · 실제 연결 아님' : mode==='disconnected' ? 'SDP 미연결' : 'SDP 연결 확인 불가';
+    add(refs.body,'p',connection+' · 이 PC의 로컬 조회 결과와 별개입니다.').setAttribute('class','pc-warn');
+    if (phase !== 'ok') {
+      refs.status.textContent=phase==='loading' ? '실제 PC 상태를 읽는 중입니다. Windows 조회는 최대 14초 걸릴 수 있습니다.' :
+        phase==='error' ? '조회 결과 확인 불가' : '아직 PC 상태를 조회하지 않았습니다.';
+      if (phase==='error') unavailable(refs.body,{code:reason});
+      else add(refs.body,'p','조회 버튼을 누를 때만 측정합니다. 예시 숫자로 대신하지 않습니다.');
+      return;
+    }
+    const r=snapshot.resources;
+    const measured=Object.values(r).filter(x=>x.state==='ok').length;
+    refs.status.textContent='마지막 수동 조회: '+at(snapshot.checkedAt)+' · 7개 항목 중 '+measured+'개 조회, '+(7-measured)+'개 확인 불가';
+    const cards=add(refs.body,'div');cards.setAttribute('class','pc-grid');
+    const previous=history.length>1 ? history.at(-2) : null;
+    function card(title,key,value,detail) {
+      const c=add(cards,'section');c.setAttribute('class','pc-card');add(c,'h4',title);
+      if (r[key].state!=='ok') unavailable(c,r[key]);
+      else {
+        add(c,'p',value).setAttribute('class','pc-value');
+        add(c,'p',detail).setAttribute('class','pc-note');
+        if (['cpu','memory'].includes(key) && previous?.resources[key].state==='ok') {
+          const delta=r[key].percent-previous.resources[key].percent;
+          add(c,'p','이전 수동 조회 대비 '+(delta>=0?'+':'')+delta.toFixed(1)+' %p');
+        }
+      }
+      add(c,'p','측정 시각 '+at(r[key].checkedAt)).setAttribute('class','pc-note');
+    }
+    card('CPU 사용률','cpu',r.cpu.percent+' %','전체 논리 CPU 평균 · '+r.cpu.intervalMs+' ms 구간');
+    card('메모리 사용량','memory',gib(r.memory.usedBytes)+' GiB', '전체 '+gib(r.memory.totalBytes)+' GiB · '+r.memory.percent+' %');
+    card('디스크 여유 공간','disk',gib(r.disk.availableBytes)+' GiB','프로젝트가 있는 볼륨 · 전체 '+gib(r.disk.totalBytes)+' GiB');
+    const last=add(cards,'section');last.setAttribute('class','pc-card');add(last,'h4','조회 상태');
+    add(last,'p',measured+' / 7').setAttribute('class','pc-value');
+    add(last,'p','실제 로컬 조회 · 보안 안전 판정이 아닙니다.');
+    add(refs.body,'h4','수동 조회 추이');
+    add(refs.body,'p','이 화면에서 누른 최근 20회만 메모리에 보관합니다. 같은 시각의 지속 감시 자료가 아닙니다.').setAttribute('class','pc-note');
+    const tableWrap=add(refs.body,'div');tableWrap.setAttribute('class','pc-table-wrap');
+    const table=add(tableWrap,'table');add(table,'caption','최근 5회 조회 비교 (GiB = 1024³ 바이트)');
+    const head=add(table,'thead'),hr=add(head,'tr');
+    for (const label of ['조회 시각','CPU (%)','메모리 (%)','디스크 여유 (GiB)']) add(hr,'th',label).setAttribute('scope','col');
+    const tbody=add(table,'tbody');
+    for (const sample of history.slice(-5).reverse()) {
+      const row=add(tbody,'tr'),s=sample.resources;
+      for (const value of [at(sample.checkedAt),s.cpu.state==='ok'?s.cpu.percent:'확인 불가',s.memory.state==='ok'?s.memory.percent:'확인 불가',s.disk.state==='ok'?gib(s.disk.availableBytes):'확인 불가']) add(row,'td',value);
+    }
+    for (const [key,title] of [['network','네트워크 주소 구성'],['firewall','Windows 방화벽 프로필 설정'],['systemLog','System 경고·오류'],['applicationLog','Application 경고·오류']]) {
+      const section=add(refs.body,'section');add(section,'h4',title);
+      if (r[key].state!=='ok') unavailable(section,r[key]);
+      else if (key==='network') {
+        add(section,'p','구성된 외부 인터페이스 '+r.network.interfaces.length+'개 · 인터넷 통신 성공 여부는 검사하지 않았습니다.');
+        for (const iface of r.network.interfaces) add(section,'p',iface.label+' · IPv4 주소 '+iface.ipv4+'개 · IPv6 주소 '+iface.ipv6+'개');
+      } else if (key==='firewall') {
+        for (const p of r.firewall.profiles) add(section,'p',p.profile+' · '+(p.enabled===true?'사용 설정':p.enabled===false?'사용 안 함 설정':'확인 불가'));
+        add(section,'p','프로필 설정을 읽은 결과이며 실제 차단 효과를 시험한 결과는 아닙니다.');
+      } else {
+        const log=r[key];
+        add(section,'p','오류 '+log.errors+'건 · 경고 '+log.warnings+'건'+(log.truncated?' (일부 조회: 각각 최소 건수)':''));
+        add(section,'p','조회 범위 '+at(log.windowStart)+' ~ '+at(log.checkedAt)+' · 최근 24시간, 최대 5,000건');
+        if (log.truncated) add(section,'p','조회 상한에 도달했습니다. 범위 전체 건수가 아닙니다.').setAttribute('class','pc-warn');
+      }
+      add(section,'p','측정 시각 '+at(r[key].checkedAt)+' · 출처 '+r[key].source).setAttribute('class','pc-note');
+    }
+    add(refs.body,'p','Windows 경고·오류 건수는 침해·공격 탐지 결과가 아닙니다. 방화벽·보안 설정은 바꾸지 않습니다.').setAttribute('class','pc-warn');
+  }
+  function cancel(code='PC_CANCELLED') {
+    generation++;controller?.abort();clearTimeout(timer);snapshot=null;reason=code;phase='error';draw();
+  }
+  async function refresh() {
+    if (phase==='loading') return;
+    const mine=++generation;controller=new AbortController();snapshot=null;reason=null;phase='loading';draw();
+    timer=setTimeout(()=>{if(mine===generation)cancel('PC_TIMEOUT');},timeoutMs);
+    try {
+      const data=await read(controller.signal);
+      if (mine!==generation) return;
+      snapshot=validateLocalPcSnapshot(data);history.push(snapshot);if(history.length>20)history.shift();phase='ok';
+    } catch (error) {
+      if (mine!==generation) return;
+      reason=Object.hasOwn(PC_REASONS,error?.message)?error.message:'LOCAL_READ_FAILED';snapshot=null;phase='error';
+    } finally { if(mine===generation){clearTimeout(timer);draw();} }
+  }
+  return {
+    refresh, cancel,
+    render(engineMode='unknown') {
+      mode=engineMode;
+      const root=document.createElement('section');root.setAttribute('id','student-local-pc');root.setAttribute('class','local-pc');
+      root.setAttribute('aria-label','내 PC 상태와 읽기 전용 연결 기록');
+      const css=add(root,'link');css.setAttribute('rel','stylesheet');css.setAttribute('href','/student/local-pc.css');
+      add(root,'h3','내 PC 상태 · 마지막 수동 조회');
+      add(root,'p','학생 추가 기능 · 실제 로컬 측정. 제공 보안 엔진·AI 연결과 별개입니다.');
+      const toolbar=add(root,'div');toolbar.setAttribute('class','pc-toolbar');
+      const button=add(toolbar,'button','PC 상태 조회');button.type='button';button.addEventListener('click',refresh);
+      const stop=add(toolbar,'button','PC 조회 취소');stop.type='button';stop.addEventListener('click',()=>cancel());
+      const status=add(root,'p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+      const body=add(root,'div');refs={root,refresh:button,cancel:stop,status,body};draw();return root;
+    },
+  };
+}
+
 export function createStudentView() {
+  const localPc = createLocalPcController();
   // AI 입력은 제공 UI가 검증·정제한다. 추가 필드나 원문 오류는 출력하지 않는다.
   const aiText = value => {
     if (typeof value !== 'string' || !value.trim() || value.length > 2000) return '확인 불가';
@@ -229,6 +414,10 @@ export function createStudentView() {
     renderStatus({ devices, sessions, notifications, diagnostics, mode } = {}) {
       const root = document.createElement('section');
       root.setAttribute('aria-label', '기기·세션·알림과 도움정보');
+      const pcLink = document.createElement('a');
+      pcLink.href = '#student-local-pc';
+      pcLink.textContent = '내 PC 상태·연결 기록으로 이동';
+      root.appendChild(pcLink);
       const add = (parent, tag, value = '') => {
         const node = document.createElement(tag);
         node.textContent = String(value);
@@ -318,6 +507,7 @@ export function createStudentView() {
           copyResult.textContent = '도움정보를 복사하지 못했습니다. 화면의 공개 점검 정보를 확인하세요.';
         }
       });
+      root.appendChild(localPc.render(mode));
       return root;
     },
     renderVulnerabilities({ status = 'idle', mode, data, error } = {}) {
