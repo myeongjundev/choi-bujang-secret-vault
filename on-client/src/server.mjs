@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {AsyncLocalStorage} from 'node:async_hooks';
+import {attachStudentPcRoutes} from '../student/local-pc-routes.mjs';
 import {types} from 'node:util';
 import {createActionService} from './actions/service.mjs';
 import {createSdpActionConfiguration} from './actions/sdp-action-engine.mjs';
@@ -749,5 +750,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
       ...(actionStartup?{sdpActionStartup:actionStartup.sdpActionStartup}:{})});
   }catch(error){sdpHost?.close();throw error;}
   if(sdpHost){server.once('close',()=>sdpHost.close());server.once('error',()=>sdpHost.close());}
+  // 공식 CLI의 native/SDP 초기화를 유지한 같은 서버에 학생 PC 조회를 연결한다.
+  attachStudentPcRoutes(server);
   server.listen(port,'127.0.0.1',()=>console.log(`케셰브 ${demo?'예제':'연결 확인'}: http://127.0.0.1:${port}`));
 }

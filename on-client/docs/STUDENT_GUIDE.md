@@ -1,30 +1,30 @@
 # 케셰브 학생 설명서 · 검증 중인 버전
 
-이 앱은 직원이 자신의 로그인·기기·세션, 업무 앱 판정, 접속·XDR 기록과 AI 참고 설명을 확인하는 보안 Agent다. 이 문서는 학생이 작성한 21단계 설명서다. 현재 13~20단계의 학생 표시 함수와 38개 합성 회귀시험을 갖췄다. 실제 회사 시스템·AI·보안 조치·OSV 운영 연결의 완료를 뜻하지 않는다. 시작 틀 버전은 0.2.11이고 학생 구현은 v0.9 검증 중이다. 제공 on-client README와 설명서는 보존했다.
+2026-10-28 현재 실행 기준이다. 직원이 자신의 로그인·기기·세션, 업무 앱 판정과 보안 기록을 확인하는 앱에 읽기 전용 PC 대시보드를 추가했다. 시작 틀은 0.2.14다. 기존 학생 함수·합성 시험과 현재 검증 범위를 구분하며, 실제 회사 시스템·AI·보안 조치·OSV 운영 연결의 완료를 뜻하지 않는다. 처음 실행은 [START_HERE](../student/START_HERE.md)를 따른다. 10월 24일 통과본 재현 문서는 당시 기록으로 보존한다.
 
 ## 새 PowerShell에서 설치·확인
 
 Git과 Node.js가 설치된 PC에서 아직 존재하지 않는 빈 작업 경로를 선택한다. 기존 프로젝트 폴더에 다시 내려받거나 덮어쓰지 않는다. 이 앱에는 외부 npm 의존성이 없어 npm install이 필요하지 않다.
 
-선언 지원 버전은 on-client/package.json의 engines.node에 적힌 Node 24.19.0 한 버전이다. 이번 실측은 Windows PowerShell·Git 2.53.0.windows.2·Node 24.15.0에서 수행한 선언 범위 밖의 참고 진단이다. Node 24.19.0 및 다른 OS의 실제 실행은 미확인이다. clone을 실행할 부모 폴더에서 PowerShell을 연 뒤 아래 명령을 순서대로 실행한다. `Set-Location` 이후에는 저장소 최상위가 작업 위치다.
+선언 지원 버전은 on-client/package.json의 Node 24.19.0이다. 공식 해시를 대조한 Windows x64 휴대형 24.19.0에서 시험·실제 PC 조회·실행/재시작을 확인했다. 다른 OS/PC는 미검증이다. 기본 main은 이전 통과본이므로 아래처럼 작업 브랜치를 명시한다. `Set-Location` 이후에는 저장소 최상위가 작업 위치다.
 
 ```powershell
-git clone https://github.com/myeongjundev/choi-bujang-secret-vault.git keshev-clean
+git clone --branch codex/keshev-final-build --single-branch https://github.com/myeongjundev/choi-bujang-secret-vault.git keshev-clean
 Set-Location -LiteralPath .\keshev-clean
 node --version
 npm --prefix on-client run check
 node --test "on-client/student/tests/*.test.mjs"
 ```
 
-실측 Node는 v24.15.0이다. npm check는 문법 검사만 한다. 뒤 명령은 현재 소스 하나로 13~20단계 학생 함수의 정상·실패·보안 경로 38개를 검사하며, 실제 원천 연결 검사는 아니다. `.env`나 인증서·비밀값을 원본 폴더에서 복사하지 않는다.
+node --version이 v24.19.0인지 먼저 확인한다. 다르면 뒤 명령을 실행하기 전에 START_HERE의 휴대형 Node 선택을 따른다. npm check는 문법 검사이고, test는 학생 표시·PC 조회·공식 CLI 경로의 회귀 검사이며 실제 원천 연결 검사는 아니다. `.env`나 인증서·비밀값을 원본 폴더에서 복사하지 않는다.
 
 | 버전 근거 | 의미 |
 | --- | --- |
-| on-client/package.json: engines.node=24.19.0 | 이 앱의 제공 선언 지원 버전. 이번 실제 실행은 미확인 |
-| tools/start-alekov.ps1: major 22~24 허용 | 제공 공통 실행 도구의 입력 검사 범위. 학생 앱의 지원 범위를 확장하지 않음. 이번 실행은 Node 직접 명령 사용 |
-| 이번 실측 Node v24.15.0 | 38개 시험·기본/예제 실행·재시작의 참고 관측. 공식 지원 버전 검증으로 세지 않음 |
+| on-client/package.json: engines.node=24.19.0 | 이 앱의 선언 지원 버전이며 Windows 실측 확인 |
+| tools/start-alekov.ps1: major 22~24 허용 | 공통 도구 입력 범위이며 학생 앱의 지원 범위를 확장하지 않음 |
+| 과거 Node v24.15.0 기록 | 10/24 참고 관측. 현재 24.19.0 확인으로 과거 결과를 바꾸지 않음 |
 
-제공 package.json·실행 도구를 수정하지 않고 위 차이를 미해결 제한으로 기록한다. 학생 문서는 Node 22~24 전체의 지원이나 Node 24.19.0 실측 성공을 선언하지 않는다.
+제공 package.json과 실행 도구는 유지한다. 휴대형 Node를 쓸 때는 START_HERE처럼 현재 PowerShell 창에만 Node 경로를 추가한다. Node 22~24 전체를 지원한다고 확대하지 않는다.
 
 ```text
 keshev-clean/                   ← PowerShell 작업 위치
@@ -42,17 +42,17 @@ keshev-clean/                   ← PowerShell 작업 위치
 위 저장소 최상위에서 다음 명령을 실행한 뒤 브라우저로 http://127.0.0.1:5189/ 를 연다.
 
 ```powershell
-node on-client/src/server.mjs
+powershell -NoProfile -ExecutionPolicy Bypass -File .\on-client\tools\start-alekov.ps1 -Port 5189
 ```
 
-기본값은 연결 없음이다. 사용자·기기·세션·업무 앱·기록을 불러오지 못했다는 표시가 나타나면 실제 접속이 허용됐다는 뜻이 아니다. 실행 터미널에서 Ctrl+C로 종료한다. 같은 명령으로 다시 켜고 브라우저의 다시 불러오기를 누른다.
+실행 도구는 프로젝트 밖의 본인 Windows 폴더에 계정 연결 설정을 준비한다. 그 뒤 화면에서 로그인·승인이 필요하고 실제 SDP 원천 연결도 별도다. 사용자·기기·세션·기록을 불러오지 못하면 실제 접속 허용으로 해석하지 않는다. PC 화면은 같은 서버의 http://127.0.0.1:5189/student/pc 다. 실행 창에서 Ctrl+C로 종료하고 같은 명령으로 재시작한다.
 
 정상 시작 신호는 터미널의 `케셰브 연결 확인: http://127.0.0.1:5189`다. 예제 시작은 `케셰브 예제: http://127.0.0.1:5189`이고 브라우저에 예제 데이터(demo) 표시가 있다. 시작 로그만으로 원천 엔진·AI가 연결됐다고 판단하지 않는다.
 
 예제 자료를 별도로 볼 때는 앞 서버를 끈 뒤 실행한다.
 
 ```powershell
-node on-client/src/server.mjs --demo
+powershell -NoProfile -ExecutionPolicy Bypass -File .\on-client\tools\start-alekov.ps1 -Port 5189 -Demo
 ```
 
 보호 현황 → 업무 앱 → 보안 기록을 누른다. 예제 자료 표시, 연습 사용자·기기·세션, 업무 앱의 허용/거부/추가 확인, 기록 상세의 근거·규칙·상태를 확인한다. 예제는 실제 시스템 연결 재현으로 기록하지 않는다. 다시 불러오기 후 이전 판정·설명·조치 결과가 초기화되어야 한다. 실제 집행을 시험 삼아 요청하지 않는다.
@@ -76,10 +76,11 @@ flowchart LR
 
 | 영역 | 담당과 현재 변경 |
 | --- | --- |
-| `src/`, `public/`, `vendor/`, `tools/`, 시작 틀 README·공식 안내·인증 설정 | 제공 영역. 이번 작업에서 수정하지 않음 |
+| `src/`, `public/`, `vendor/`, `tools/`, 시작 틀 README·공식 안내·인증 설정 | 제공 영역. src/server.mjs의 CLI 시작에 학생 라우트 연결만 추가. 나머지 초기화·인증 검사는 유지 |
 | `student/engine-adapter.mjs` | 제공 연결 자리. 기본 disconnected. 실제 엔진을 구현했다고 주장하지 않음 |
 | `student/extension.mjs` | 학생이 구현한 화면 함수 8개. 제공 UI가 검증한 입력을 읽어 DOM 또는 텍스트를 반환 |
 | `student/tests/` | 학생이 작성한 합성 DOM·회귀시험. 운영 인증이 아님 |
+| `student/local-pc-routes.mjs`, `local-pc.mjs` | 같은 서버의 읽기 전용 PC 경로와 집계. 프로젝트 전체 경로의 파일 시스템 조회 |
 | `docs/STUDENT_GUIDE.md`, 학생 검증 기록과 `student/RELEASE.md` | 학생 설명·근거·버전 문서. 공식 안내를 대체하지 않음 |
 
 | 함수 | 학생이 구현한 내용 |
@@ -100,7 +101,9 @@ flowchart LR
 | 문구 또는 코드 | 의미와 다음 확인 |
 | --- | --- |
 | 연결 없음 / ENGINE_NOT_CONNECTED | 원천 엔진이 연결되지 않음. 기본 실행인지 담당자 제공 연결이 있는지 확인 |
-| NATIVE_HOST_DISABLED | 본인 프로젝트용 native 호스트가 활성화되지 않음. 담당자 설정 안내 확인 |
+| NATIVE_HOST_DISABLED / ALEKOV_CONNECT_UNAVAILABLE | 공식 실행 도구 사용 여부와 Demo·NoNativeHost·PC 전용 개발 실행 여부부터 확인 |
+| NATIVE_HOST_UNVERIFIED | 현재 로그인 신원을 확인하지 못함. 계정 연결 확인에서 사용자 승인 필요. 성공으로 표시하지 않음 |
+| ALEKOV_VAULT_* | 과제 판정과 별개. 오류 코드·시각으로 수업용 AI에 문의하며 보호 설정을 임의 변경하지 않음 |
 | ON_AI_PROVISIONING_PENDING / 권한 준비 중 | 앱 계정·AI 권한을 확인할 수 없음. 담당자에게 현재 계정·앱 권한 확인 요청. 열쇠를 옮겨 적지 않음 |
 | WB_CLCO_AUTH_REQUIRED / ACCESS_BLOCKED | 인증·접근 권한 확인. 제공 계정 연결 화면과 담당자 안내 사용 |
 | 사용량·한도·이용 시간 | 반 사용량/한도/이용 시간 구분. 자동 반복 요청 대신 담당자 확인 |
@@ -116,8 +119,8 @@ flowchart LR
 
 ## 확인 범위와 기다림(UNV)
 
-현재 소스의 38개 합성 시험, 문법 검사, 로컬 기본/예제 실행과 새 복제에서의 확인 결과는 `STUDENT_CLEAN_REPRODUCTION.md`에 기록한다. 공식 통과는 상황실에서 받은 코드 원문 판정이며 서버가 이 앱을 실행한 증거가 아니다.
+현재 검증 범위는 [DAY456](../student/DAY456.md)와 [문제 수정 기록](../student/TROUBLESHOOTING.md)을 따른다. STUDENT_CLEAN_REPRODUCTION.md는 10/24 고정 통과본의 38개 시험과 재현 기록이다. 공식 통과는 코드 원문 판정이며 서버가 앱을 실행한 증거가 아니다.
 
-다음 항목은 기다림(UNV) 또는 미확인이다: 실제 사용자·기기·세션의 운영 엔진 연결, 앱 계정/AI 권한과 실제 사건 설명 호출, 실제 SDP 조치 준비·사람 확인·집행·효과 재조회, 실제 설치 프로젝트와 승인 패키지에 대한 OSV 조회. 20단계 통과 후 21단계가 열렸으며 21·22 공식 결과는 별도 접수와 상황실 판정으로 확인한다.
+다음 항목은 미확인이다: 실제 사용자·기기·세션 운영 연결, 사용자 승인·AI 권한과 실제 사건 설명 호출, 실제 SDP 조치·효과 재조회, 실제 설치 프로젝트·승인 패키지 OSV 조회. 21·22를 포함한 13~22단계는 이전 공식 코드 원문 판정에서 전체 통과했으며 이 운영 범위를 대신하지 않는다.
 
 운영 키·권한을 임의 발급하거나 대체 연결을 만들어 이 항목을 채우지 않는다. 전체 완료·v1.0은 동일 최종 소스의 누적 재현과 실제 집행 연결, 공식 최종 수용 조건을 충족한 뒤에만 표시한다.

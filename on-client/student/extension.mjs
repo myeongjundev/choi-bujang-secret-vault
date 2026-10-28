@@ -12,7 +12,7 @@ const PC_REASONS = {
   PC_UNSUPPORTED:'이 운영체제에서 지원하지 않는 조회입니다.',
   PC_INVALID_DATA:'조회 결과의 형식이나 단위를 확인하지 못했습니다.',
   PC_CANCELLED:'조회를 취소했습니다. 도착이 늦은 결과는 표시하지 않습니다.',
-  LOCAL_RUNTIME_REQUIRED:'학생 PC 조회 실행 명령(node student/run-local-pc.mjs)으로 앱을 켠 뒤 다시 조회하세요.',
+  LOCAL_RUNTIME_REQUIRED:'최신 작업 브랜치에서 공식 실행 도구(tools/start-alekov.ps1)로 앱을 다시 켠 뒤 조회하세요.',
   LOCAL_READ_FAILED:'로컬 조회 서버를 확인하고 직접 다시 조회하세요.',
 };
 

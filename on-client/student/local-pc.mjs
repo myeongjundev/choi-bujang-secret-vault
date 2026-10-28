@@ -1,7 +1,7 @@
 // 학생 추가. 로컬 집계만 반환하며 주소·계정·이벤트 본문·명령 오류 원문을 내보내지 않는다.
 import os from 'node:os';
 import { statfs } from 'node:fs/promises';
-import { parse, resolve, join } from 'node:path';
+import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -105,7 +105,7 @@ export async function collectLocalPc({
       return {totalBytes,usedBytes:totalBytes-freeBytes,percent:Math.round((1-freeBytes/totalBytes)*1000)/10};
     }),
     read('disk','Node fs.statfs project volume', async () => {
-      const s = await diskReader(parse(resolve(projectDirectory)).root);
+      const s = await diskReader(resolve(projectDirectory));
       const totalBytes = Number(s.blocks) * Number(s.bsize), availableBytes = Number(s.bavail) * Number(s.bsize);
       if (!number(totalBytes) || !number(availableBytes) || totalBytes <= 0 || availableBytes > totalBytes) throw Error('PC_INVALID_DATA');
       return {totalBytes,availableBytes,scope:'project-volume'};

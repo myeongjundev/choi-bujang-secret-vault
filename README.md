@@ -6,10 +6,10 @@
 
 ~~~powershell
 cd on-client
-node student/run-local-pc.mjs
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 ~~~
 
-브라우저 주소는 **http://127.0.0.1:5189/student/pc** 입니다. PC 자원·연결/Windows 기록·기존 사건 근거로 가는 동선, 수동 조회·취소·실패 안내·최근 조회 비교를 제공합니다. 원래 보안 화면은 http://127.0.0.1:5189/ 에 그대로 있습니다. 숫자는 실제 로컬 관측이며 SDP 미연결·AI·조치 집행의 성공과 별개입니다.
+브라우저 주소는 **http://127.0.0.1:5189/student/pc** 입니다. 공식 도구가 계정 연결용 개인 설정을 준비한 같은 서버에서 PC 조회를 제공합니다. 로그인·AI 승인은 화면에서 직접 진행합니다. 원래 보안 화면은 http://127.0.0.1:5189/ 입니다. 숫자는 실제 로컬 관측이며 SDP·AI·조치 집행의 성공과 별개입니다. 휴대형 Node·대체 포트는 START_HERE를 따릅니다.
 
 4~6일차의 제공/학생 경계·검증 범위는 [DAY456](on-client/student/DAY456.md), 실제 수집 방식은 [DAY23](on-client/student/DAY23.md)를 따릅니다. 최신 과정 안내의 6일차는 **포장 없이 GitHub 저장소와 40자리 커밋 준비**입니다. package-app·업데이트 도구·새 포장 스크립트는 이번 작업에 사용하지 않습니다.
 
