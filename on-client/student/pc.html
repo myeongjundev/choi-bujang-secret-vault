@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>케셰브 · 내 PC 점검</title>
+  <link rel="stylesheet" href="/student/local-pc.css">
+  <script type="module" src="/student/pc.mjs"></script>
+</head>
+<body class="pc-dashboard">
+  <a class="pc-skip" href="#pc-main">점검 화면으로 건너뛰기</a>
+  <header class="pc-topbar">
+    <a class="pc-brand" href="/student/pc"><span class="pc-brand-icon" aria-hidden="true">K</span> 케셰브 <span>내 PC 점검</span></a>
+    <a class="pc-legacy-link" href="/">기존 보안 화면 열기 ↗</a>
+  </header>
+  <main id="pc-main" class="pc-shell">
+    <div class="pc-intro">
+      <div><p class="pc-eyebrow">내 PC에서, 필요한 때에</p><h1>지금 상태를 읽고<br>변화를 비교하세요.</h1></div>
+      <p class="pc-intro-note">자동 감시 없이 직접 조회합니다.<br>조회한 값과 확인하지 못한 항목을 구분합니다.</p>
+    </div>
+    <nav class="pc-feature-nav" aria-label="핵심 기능">
+      <a href="#pc-resources"><span>01</span><strong>PC 자원 상태</strong><small>CPU · 메모리 · 디스크</small></a>
+      <a href="#pc-connections"><span>02</span><strong>연결·Windows 기록</strong><small>주소 구성 · 방화벽 · 오류 건수</small></a>
+      <a href="#pc-evidence"><span>03</span><strong>사건 근거·조치</strong><small>기존 보안 화면에서 확인</small></a>
+    </nav>
+    <div id="pc-view"><p role="status">점검 화면을 준비하고 있습니다.</p></div>
+    <section id="pc-evidence" class="pc-evidence">
+      <div><p class="pc-eyebrow">근거를 따라 확인하기</p><h2>보안 사건과 조치 결과는 별도로 확인합니다.</h2><p>PC 조회가 성공해도 보안 서버·AI·조치 집행의 성공을 뜻하지 않습니다. 사건의 근거와 실제 조치 결과는 기존 보안 화면에서 확인하세요.</p></div>
+      <a class="pc-secondary-link" href="/">보안 사건·조치 화면 열기 ↗</a>
+    </section>
+    <footer class="pc-footer">케셰브 · 수동 조회 자료입니다. 경고·오류 건수는 침해나 공격 탐지 결과가 아닙니다.</footer>
+    <noscript>조회 화면을 사용하려면 브라우저의 JavaScript 실행이 필요합니다.</noscript>
+  </main>
+</body>
+</html>

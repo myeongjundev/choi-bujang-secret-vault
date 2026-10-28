@@ -144,6 +144,13 @@ test('로컬 API는 외부 Origin·Host·단순 GET·변경 메서드·쿼리를
   assert.equal(success.headers['access-control-allow-origin'],undefined);
   assert.equal(success.headers['cache-control'],'no-store');
   assert.equal((await http(port,'/student/local-pc.css')).status,200);
+  const landing=await http(port,'/student/pc');
+  assert.equal(landing.status,200);
+  assert.match(landing.headers['content-security-policy'],/script-src 'self'/);
+  assert.doesNotMatch(landing.headers['content-security-policy'],/unsafe-inline/);
+  assert.equal((await http(port,'/student/pc.mjs')).status,200);
+  assert.equal((await http(port,'/student/pc?mode=demo')).status,400);
+  assert.equal(calls,1); // 정적 시작 화면을 읽는 것만으로 PC 수집을 추가하지 않는다.
   const base=await http(port,'/api/diagnostics');assert.equal(JSON.parse(base.body).data.engine.mode,'disconnected');
   assert.equal((await http(port,'/api/diagnostics',{headers:{Host:'fixture.invalid'}})).status,403);
 });

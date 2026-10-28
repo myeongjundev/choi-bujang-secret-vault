@@ -1,4 +1,17 @@
-# BYTE BACK 자료실 · 12단계 저장점
+# BYTE BACK 자료실 · 케셰브 PC 점검
+
+## 현재 실행 안내 · 2026-10-28
+
+케셰브 PC 점검의 처음 실행 방법은 **[START_HERE](on-client/student/START_HERE.md)**를 읽습니다. Windows·Node 24.19.0에서 외부 npm 의존성 없이 실행합니다.
+
+~~~powershell
+cd on-client
+node student/run-local-pc.mjs
+~~~
+
+브라우저 주소는 **http://127.0.0.1:5189/student/pc** 입니다. PC 자원·연결/Windows 기록·기존 사건 근거로 가는 동선, 수동 조회·취소·실패 안내·최근 조회 비교를 제공합니다. 원래 보안 화면은 http://127.0.0.1:5189/ 에 그대로 있습니다. 숫자는 실제 로컬 관측이며 SDP 미연결·AI·조치 집행의 성공과 별개입니다.
+
+4~6일차의 제공/학생 경계·검증 범위는 [DAY456](on-client/student/DAY456.md), 실제 수집 방식은 [DAY23](on-client/student/DAY23.md)를 따릅니다. 최신 과정 안내의 6일차는 **포장 없이 GitHub 저장소와 40자리 커밋 준비**입니다. package-app·업데이트 도구·새 포장 스크립트는 이번 작업에 사용하지 않습니다.
 
 배포: https://choi-bujang-secret-vault-sigma.vercel.app
 
@@ -6,9 +19,9 @@
 
 ## 케셰브 보안 Agent · 13~22단계 학생 안내
 
-`on-client/`는 직원이 자기 로그인·기기·세션, 업무 앱 판정, 접속·XDR 기록을 확인하는 로컬 보안 앱이다. 학생 화면 8개 함수에는 AI 참고 설명·조치 처리 상태·정확한 패키지 버전과 OSV 결과 표시도 포함한다. 학생 구현은 **v0.9 검증 중**, 제공 시작 틀은 0.2.11이다. 현재 13~20단계 공식 통과이며 실제 운영 연결·조치 실행은 미확인이다.
+`on-client/`는 직원이 자기 로그인·기기·세션, 업무 앱 판정, 접속·XDR 기록을 확인하는 로컬 보안 앱이다. 학생 화면 8개 함수에는 AI 참고 설명·조치 처리 상태·정확한 패키지 버전과 OSV 결과 표시도 포함한다. 학생 구현은 **v0.9 검증 중**, 현재 제공 시작 틀은 0.2.14다. 2026-10-24에 13~22단계 코드 원문 검토를 모두 통과했으며 실제 운영 연결·조치 실행은 미확인이다.
 
-제공 package.json의 선언 지원 버전은 Node 24.19.0 한 버전이다. 이번 실측 진단 환경은 Windows PowerShell, Git 2.53.0.windows.2, Node v24.15.0이었다. 이 실측은 선언 범위 밖의 참고 관측이며 지원 범위를 22~24로 넓히는 근거가 아니다. Node 24.19.0에서의 실제 실행은 미확인이다. 이 저장소 최상위의 PowerShell에서 `npm --prefix on-client run check`, `node --test "on-client/student/tests/*.test.mjs"`, `node on-client/src/server.mjs`를 실행한다. 브라우저 주소는 http://127.0.0.1:5189/ 이다. 기본 실행은 연결 없음이며 예제 실행은 `node on-client/src/server.mjs --demo`다. 종료는 실행 터미널의 Ctrl+C다.
+제공 package.json의 선언 지원 버전은 Node 24.19.0 한 버전이다. 2026-10-28에는 공식 해시를 대조한 Node 24.19.0으로 학생 문법·51개 시험·실제 PC 7항목 조회를 확인했다. 이전 Node 24.15.0 기록은 당시 선언 범위 밖의 참고 관측이다. 다른 OS/PC·설치형 host·실제 회사 서버 연결은 미검증이다. 이 저장소 최상위의 PowerShell에서 `npm --prefix on-client run check`, `node --test "on-client/student/tests/*.test.mjs"`, `node on-client/src/server.mjs`를 실행한다. 브라우저 주소는 http://127.0.0.1:5189/ 이다. 기본 실행은 연결 없음이며 예제 실행은 `node on-client/src/server.mjs --demo`다. 종료는 실행 터미널의 Ctrl+C다.
 
 설치·폴더 구조·실행·종료·재시작·구성도·제공/학생 경계·오류별 확인 순서는 [학생 설명서](on-client/docs/STUDENT_GUIDE.md), 동일 소스의 새 복제 결과는 [새 폴더 재현 기록](on-client/docs/STUDENT_CLEAN_REPRODUCTION.md), 버전·미확인 범위는 [학생 버전 기록](on-client/student/RELEASE.md)을 읽는다. 로컬 앱은 외부 npm 의존성이 없다.
 

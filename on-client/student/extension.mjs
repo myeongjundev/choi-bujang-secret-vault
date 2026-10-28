@@ -84,7 +84,8 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
     refs.refresh.disabled=phase==='loading';
     refs.refresh.textContent=history.length ? 'PC 상태 다시 조회' : 'PC 상태 조회';
     refs.cancel.disabled=phase!=='loading';
-    refs.root.setAttribute('aria-busy',String(phase==='loading'));
+    refs.body.setAttribute('aria-busy',String(phase==='loading'));
+    refs.root.setAttribute('data-state',phase);
     refs.body.replaceChildren();
     const connection = mode==='connected' ? 'SDP 연결 모드 · 제공 서버 응답 기준' :
       mode==='demo' ? 'SDP 예제 · 실제 연결 아님' : mode==='disconnected' ? 'SDP 미연결' : 'SDP 연결 확인 불가';
@@ -92,14 +93,30 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
     if (phase !== 'ok') {
       refs.status.textContent=phase==='loading' ? '실제 PC 상태를 읽는 중입니다. Windows 조회는 최대 14초 걸릴 수 있습니다.' :
         phase==='error' ? '조회 결과 확인 불가' : '아직 PC 상태를 조회하지 않았습니다.';
-      if (phase==='error') unavailable(refs.body,{code:reason});
+      const placeholders=add(refs.body,'div');placeholders.setAttribute('class','pc-grid');
+      placeholders.setAttribute('id','pc-resources');
+      for(const title of ['CPU 사용률','메모리 사용량','디스크 여유 공간','조회 상태']){
+        const tile=add(placeholders,'section');tile.setAttribute('class','pc-card');
+        add(tile,'h4',title);
+        add(tile,'p',phase==='loading'?'조회 중':phase==='error'?'확인 불가':'조회 전').setAttribute('class','pc-value pc-placeholder');
+      }
+      if (phase==='error') {
+        const alert=add(refs.body,'section');alert.setAttribute('role','alert');
+        add(alert,'h4','PC 상태를 확인하지 못했습니다');
+        unavailable(alert,{code:reason});
+        add(alert,'p','현재 값으로 표시할 숫자가 없습니다. 실행 창을 확인한 뒤 PC 상태 조회 버튼으로 다시 시도하세요.');
+      }
       else add(refs.body,'p','조회 버튼을 누를 때만 측정합니다. 예시 숫자로 대신하지 않습니다.');
+      const connectionPlaceholder=add(refs.body,'section');
+      connectionPlaceholder.setAttribute('id','pc-connections');
+      add(connectionPlaceholder,'h4','연결·Windows 기록');
+      add(connectionPlaceholder,'p','PC 상태 조회를 누르면 네트워크 주소 구성·방화벽 프로필·System/Application 경고와 오류 건수를 함께 확인합니다.');
       return;
     }
     const r=snapshot.resources;
     const measured=Object.values(r).filter(x=>x.state==='ok').length;
     refs.status.textContent='마지막 수동 조회: '+at(snapshot.checkedAt)+' · 7개 항목 중 '+measured+'개 조회, '+(7-measured)+'개 확인 불가';
-    const cards=add(refs.body,'div');cards.setAttribute('class','pc-grid');
+    const cards=add(refs.body,'div');cards.setAttribute('class','pc-grid');cards.setAttribute('id','pc-resources');
     const previous=history.length>1 ? history.at(-2) : null;
     function card(title,key,value,detail) {
       const c=add(cards,'section');c.setAttribute('class','pc-card');add(c,'h4',title);
@@ -120,7 +137,7 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
     const last=add(cards,'section');last.setAttribute('class','pc-card');add(last,'h4','조회 상태');
     add(last,'p',measured+' / 7').setAttribute('class','pc-value');
     add(last,'p','실제 로컬 조회 · 보안 안전 판정이 아닙니다.');
-    add(refs.body,'h4','수동 조회 추이');
+    const historyTitle=add(refs.body,'h4','수동 조회 추이');historyTitle.setAttribute('id','pc-history');
     add(refs.body,'p','이 화면에서 누른 최근 20회만 메모리에 보관합니다. 같은 시각의 지속 감시 자료가 아닙니다.').setAttribute('class','pc-note');
     const tableWrap=add(refs.body,'div');tableWrap.setAttribute('class','pc-table-wrap');
     const table=add(tableWrap,'table');add(table,'caption','최근 5회 조회 비교 (GiB = 1024³ 바이트)');
@@ -129,10 +146,21 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
     const tbody=add(table,'tbody');
     for (const sample of history.slice(-5).reverse()) {
       const row=add(tbody,'tr'),s=sample.resources;
-      for (const value of [at(sample.checkedAt),s.cpu.state==='ok'?s.cpu.percent:'확인 불가',s.memory.state==='ok'?s.memory.percent:'확인 불가',s.disk.state==='ok'?gib(s.disk.availableBytes):'확인 불가']) add(row,'td',value);
+      add(row,'td',at(sample.checkedAt));
+      for(const key of ['cpu','memory']){
+        const cell=add(row,'td',s[key].state==='ok'?s[key].percent+' %':'확인 불가');
+        if(s[key].state==='ok'){
+          const meter=add(cell,'meter');meter.setAttribute('min','0');meter.setAttribute('max','100');
+          meter.setAttribute('value',String(s[key].percent));meter.setAttribute('aria-label',at(sample.checkedAt)+' '+key+' '+s[key].percent+' %');
+        }
+      }
+      add(row,'td',s.disk.state==='ok'?gib(s.disk.availableBytes):'확인 불가');
     }
+    const connectionTitle=add(refs.body,'h4','연결·Windows 기록');connectionTitle.setAttribute('id','pc-connections');
+    add(refs.body,'p','주소 구성과 설정·기록을 읽은 결과입니다. 실제 통신이나 공격 탐지 결과와 구분해 보세요.').setAttribute('class','pc-note');
+    const connectionGrid=add(refs.body,'div');connectionGrid.setAttribute('class','pc-connection-grid');
     for (const [key,title] of [['network','네트워크 주소 구성'],['firewall','Windows 방화벽 프로필 설정'],['systemLog','System 경고·오류'],['applicationLog','Application 경고·오류']]) {
-      const section=add(refs.body,'section');add(section,'h4',title);
+      const section=add(connectionGrid,'section');section.setAttribute('class','pc-diagnostic');add(section,'h4',title);
       if (r[key].state!=='ok') unavailable(section,r[key]);
       else if (key==='network') {
         add(section,'p','구성된 외부 인터페이스 '+r.network.interfaces.length+'개 · 인터넷 통신 성공 여부는 검사하지 않았습니다.');
@@ -174,12 +202,13 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
       root.setAttribute('aria-label','내 PC 상태와 읽기 전용 연결 기록');
       const css=add(root,'link');css.setAttribute('rel','stylesheet');css.setAttribute('href','/student/local-pc.css');
       add(root,'h3','내 PC 상태 · 마지막 수동 조회');
-      add(root,'p','학생 추가 기능 · 실제 로컬 측정. 제공 보안 엔진·AI 연결과 별개입니다.');
+      add(root,'p','이 PC에서 직접 측정합니다. 보안 서버 연결 상태는 별도로 확인합니다.').setAttribute('class','pc-note');
       const toolbar=add(root,'div');toolbar.setAttribute('class','pc-toolbar');
       const button=add(toolbar,'button','PC 상태 조회');button.type='button';button.addEventListener('click',refresh);
+      button.setAttribute('aria-controls','student-pc-result');
       const stop=add(toolbar,'button','PC 조회 취소');stop.type='button';stop.addEventListener('click',()=>cancel());
       const status=add(root,'p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
-      const body=add(root,'div');refs={root,refresh:button,cancel:stop,status,body};draw();return root;
+      const body=add(root,'div');body.setAttribute('id','student-pc-result');refs={root,refresh:button,cancel:stop,status,body};draw();return root;
     },
   };
 }
