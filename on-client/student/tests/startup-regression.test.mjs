@@ -6,19 +6,26 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { collectLocalPc } from '../local-pc.mjs';
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const app = fileURLToPath(new URL('../../', import.meta.url));
+test('제공 0.2.14 서버 파일을 학생 기능 때문에 변경하지 않는다', async()=>{
+  const source=(await readFile(new URL('../../src/server.mjs',import.meta.url),'utf8')).replace(/\r\n/g,'\n');
+  // 공식 0.2.14 원본의 LF 해시. Git의 CRLF checkout도 허용하며 코드 변경은 거부한다.
+  assert.equal(createHash('sha256').update(source).digest('hex'),'f1a3eec9bcc007ec6fe3404cace44d88c98894092a7d8ea7f2d9afea992b9a77');
+});
 async function unusedPort() {
   const probe=createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));
   const port=probe.address().port;await new Promise(r=>probe.close(r));return port;
 }
 
-test('공식 CLI 진입점에서도 PC 화면과 기존 예제 경로·보호 검사가 함께 동작한다', {timeout:15000}, async t=>{
+test('학생 CLI에서 PC 화면과 기존 예제 경로·보호 검사가 함께 동작한다', {timeout:15000}, async t=>{
   const port=await unusedPort(),base='http://127.0.0.1:'+port;
-  // 개인 설정·열쇠나 engine override 없이 제공 CLI의 명시적 예제 모드만 사용한다.
+  // 학생 실행 경로에서만 PC 기능을 연결하고 제공 엔진은 예제로 확인한다.
   const env={ON_PORT:String(port)};
   for(const key of ['SystemRoot','WINDIR','PATH','TEMP','TMP']) if(process.env[key]) env[key]=process.env[key];
-  const child=spawn(process.execPath,['src/server.mjs','--demo'],{cwd:app,env,windowsHide:true,stdio:'ignore'});
+  const child=spawn(process.execPath,['student/run-local-pc.mjs','--demo'],{cwd:app,env,windowsHide:true,stdio:'ignore'});
   const ended=new Promise(r=>child.once('exit',r));
   t.after(async()=>{if(child.exitCode===null)child.kill();await ended;});
   let ready=false;
@@ -27,7 +34,7 @@ test('공식 CLI 진입점에서도 PC 화면과 기존 예제 경로·보호 �
     try{if((await fetch(base+'/',{signal:AbortSignal.timeout(500)})).status===200){ready=true;break;}}catch{}
     await delay(40);
   }
-  assert.equal(ready,true,'제공 CLI 시작');
+  assert.equal(ready,true,'학생 CLI 시작');
   const page=await fetch(base+'/student/pc');assert.equal(page.status,200);
   assert.match(await page.text(),/내 PC 점검/);
   assert.equal((await fetch(base+'/student/pc.mjs')).status,200);

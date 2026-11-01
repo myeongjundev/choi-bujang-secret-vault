@@ -1,4 +1,4 @@
-// PC-only compatibility entry. Use tools/start-alekov.ps1 for account-connected startup.
+// 학생 PC 실행 진입점. 계정·AI 연결은 별도 공식 tools/start-alekov.ps1에서 실행한다.
 import { createOnServer } from '../src/server.mjs';
 import { demoEngine } from '../src/engine.mjs';
 import { collectLocalPc } from './local-pc.mjs';

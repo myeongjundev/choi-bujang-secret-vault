@@ -1,4 +1,4 @@
-// 학생 경로는 제공 서버를 공유한다. native/SDP 초기화는 src/server.mjs가 담당한다.
+// 학생 진입점이 만든 서버에만 PC 경로를 연결한다. 제공 CLI와 계정 초기화는 수정하지 않는다.
 import { collectLocalPc } from './local-pc.mjs';
 import { readFile } from 'node:fs/promises';
 

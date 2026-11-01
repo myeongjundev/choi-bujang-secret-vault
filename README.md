@@ -1,15 +1,17 @@
 # BYTE BACK 자료실 · 케셰브 PC 점검
 
-## 현재 실행 안내 · 2026-10-28
+## 현재 실행 안내 · 2026-11-01
+
+제공 서버를 원복하고 학생 PC 진입점으로 실행을 분리했습니다. 학생 55개·이전 단계 88개 시험과 실제 PC 7/7, 조회·취소·오류 복구를 확인했습니다. [수정·검증 기록](on-client/student/TROUBLESHOOTING-2026-11-01.md)을 따릅니다.
 
 케셰브 PC 점검의 처음 실행 방법은 **[START_HERE](on-client/student/START_HERE.md)**를 읽습니다. Windows·Node 24.19.0에서 외부 npm 의존성 없이 실행합니다.
 
 ~~~powershell
 cd on-client
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
+node student/run-local-pc.mjs
 ~~~
 
-브라우저 주소는 **http://127.0.0.1:5189/student/pc** 입니다. 공식 도구가 계정 연결용 개인 설정을 준비한 같은 서버에서 PC 조회를 제공합니다. 로그인·AI 승인은 화면에서 직접 진행합니다. 원래 보안 화면은 http://127.0.0.1:5189/ 입니다. 숫자는 실제 로컬 관측이며 SDP·AI·조치 집행의 성공과 별개입니다. 휴대형 Node·대체 포트는 START_HERE를 따릅니다.
+브라우저 주소는 **http://127.0.0.1:5189/student/pc** 입니다. 학생 진입점에서 PC 조회를 제공합니다. 계정·AI 연결은 별도 PowerShell에서 공식 도구를 다른 포트로 실행합니다(START_HERE 참고). 제공 서버 파일은 배포 원본 그대로입니다. 원래 보안 화면은 http://127.0.0.1:5189/ 입니다. 숫자는 실제 로컬 관측이며 SDP·AI·조치 집행의 성공과 별개입니다. 휴대형 Node·대체 포트는 START_HERE를 따릅니다.
 
 4~6일차의 제공/학생 경계·검증 범위는 [DAY456](on-client/student/DAY456.md), 실제 수집 방식은 [DAY23](on-client/student/DAY23.md)를 따릅니다. 최신 과정 안내의 6일차는 **포장 없이 GitHub 저장소와 40자리 커밋 준비**입니다. package-app·업데이트 도구·새 포장 스크립트는 이번 작업에 사용하지 않습니다.
 

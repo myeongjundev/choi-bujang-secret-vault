@@ -1,6 +1,6 @@
 # 케셰브 학생 설명서 · 검증 중인 버전
 
-2026-10-28 현재 실행 기준이다. 직원이 자신의 로그인·기기·세션, 업무 앱 판정과 보안 기록을 확인하는 앱에 읽기 전용 PC 대시보드를 추가했다. 시작 틀은 0.2.14다. 기존 학생 함수·합성 시험과 현재 검증 범위를 구분하며, 실제 회사 시스템·AI·보안 조치·OSV 운영 연결의 완료를 뜻하지 않는다. 처음 실행은 [START_HERE](../student/START_HERE.md)를 따른다. 10월 24일 통과본 재현 문서는 당시 기록으로 보존한다.
+2026-11-01 현재 실행 기준이다. 직원이 자신의 로그인·기기·세션, 업무 앱 판정과 보안 기록을 확인하는 앱에 읽기 전용 PC 대시보드를 추가했다. 시작 틀은 0.2.14다. 기존 학생 함수·합성 시험과 현재 검증 범위를 구분하며, 실제 회사 시스템·AI·보안 조치·OSV 운영 연결의 완료를 뜻하지 않는다. 처음 실행은 [START_HERE](../student/START_HERE.md)를 따른다. 10월 24일 통과본 재현 문서는 당시 기록으로 보존한다.
 
 ## 새 PowerShell에서 설치·확인
 
@@ -39,20 +39,20 @@ keshev-clean/                   ← PowerShell 작업 위치
 
 ## 실행·종료·다시 실행
 
-위 저장소 최상위에서 다음 명령을 실행한 뒤 브라우저로 http://127.0.0.1:5189/ 를 연다.
+위 저장소 최상위에서 다음 명령을 실행한 뒤 브라우저로 http://127.0.0.1:5189/student/pc 를 연다.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\on-client\tools\start-alekov.ps1 -Port 5189
+node on-client/student/run-local-pc.mjs
 ```
 
-실행 도구는 프로젝트 밖의 본인 Windows 폴더에 계정 연결 설정을 준비한다. 그 뒤 화면에서 로그인·승인이 필요하고 실제 SDP 원천 연결도 별도다. 사용자·기기·세션·기록을 불러오지 못하면 실제 접속 허용으로 해석하지 않는다. PC 화면은 같은 서버의 http://127.0.0.1:5189/student/pc 다. 실행 창에서 Ctrl+C로 종료하고 같은 명령으로 재시작한다.
+학생 진입점은 제공 createOnServer를 사용하고 PC 경로만 연결한다. PC 화면은 http://127.0.0.1:5189/student/pc 이다. 종료는 실행 창 Ctrl+C, 재시작은 같은 명령이다. 시작 신호는 `케셰브 PC 점검:`이다. 예제 모드도 PC 수치는 실제 수동 조회이며 SDP 자료만 예제다.
 
-정상 시작 신호는 터미널의 `케셰브 연결 확인: http://127.0.0.1:5189`다. 예제 시작은 `케셰브 예제: http://127.0.0.1:5189`이고 브라우저에 예제 데이터(demo) 표시가 있다. 시작 로그만으로 원천 엔진·AI가 연결됐다고 판단하지 않는다.
+계정·AI 연결은 별도 PowerShell에서 `powershell -NoProfile -ExecutionPolicy Bypass -File .\on-client\tools\start-alekov.ps1 -Port 5190`을 실행하고 http://127.0.0.1:5190/ 을 연다. 개인 계정 설정과 로그인은 공식 도구가 담당한다. 공식 서버에는 학생 PC API가 없으며 두 서버는 계정 상태를 공유하지 않는다. 실제 SDP 인증서는 이번 과정에서 발급하지 않으므로 기본 미연결은 정상이다.
 
 예제 자료를 별도로 볼 때는 앞 서버를 끈 뒤 실행한다.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\on-client\tools\start-alekov.ps1 -Port 5189 -Demo
+node on-client/student/run-local-pc.mjs --demo
 ```
 
 보호 현황 → 업무 앱 → 보안 기록을 누른다. 예제 자료 표시, 연습 사용자·기기·세션, 업무 앱의 허용/거부/추가 확인, 기록 상세의 근거·규칙·상태를 확인한다. 예제는 실제 시스템 연결 재현으로 기록하지 않는다. 다시 불러오기 후 이전 판정·설명·조치 결과가 초기화되어야 한다. 실제 집행을 시험 삼아 요청하지 않는다.
@@ -76,7 +76,7 @@ flowchart LR
 
 | 영역 | 담당과 현재 변경 |
 | --- | --- |
-| `src/`, `public/`, `vendor/`, `tools/`, 시작 틀 README·공식 안내·인증 설정 | 제공 영역. src/server.mjs의 CLI 시작에 학생 라우트 연결만 추가. 나머지 초기화·인증 검사는 유지 |
+| `src/`, `public/`, `vendor/`, `tools/`, 시작 틀 README·공식 안내·인증 설정 | 제공 영역. src/server.mjs를 0.2.14 배포 원본으로 복원. 학생 진입점에서만 PC 라우트를 연결 |
 | `student/engine-adapter.mjs` | 제공 연결 자리. 기본 disconnected. 실제 엔진을 구현했다고 주장하지 않음 |
 | `student/extension.mjs` | 학생이 구현한 화면 함수 8개. 제공 UI가 검증한 입력을 읽어 DOM 또는 텍스트를 반환 |
 | `student/tests/` | 학생이 작성한 합성 DOM·회귀시험. 운영 인증이 아님 |
