@@ -1,8 +1,8 @@
 # BYTE BACK 자료실 · 케셰브 PC 점검
 
-## 현재 실행 안내 · 2026-11-01
+## 현재 실행 안내 · 2026-11-02
 
-제공 서버를 원복하고 학생 PC 진입점으로 실행을 분리했습니다. 학생 55개·이전 단계 88개 시험과 실제 PC 7/7, 조회·취소·오류 복구를 확인했습니다. [수정·검증 기록](on-client/student/TROUBLESHOOTING-2026-11-01.md)을 따릅니다.
+제공 서버를 원복하고 학생 PC 진입점으로 실행을 분리했습니다. 11월 2일에는 PowerShell 실행 정책이 기본값(Restricted)인 새 계정·새 PC에서도 방화벽·Windows 기록을 읽도록 고쳤습니다. 학생 56개·이전 단계 88개 시험과 기본 정책에서의 실제 PC 7/7을 확인했습니다. 조회·취소·오류 복구 확인은 [수정·검증 기록](on-client/student/TROUBLESHOOTING-2026-11-01.md)을 따릅니다.
 
 케셰브 PC 점검의 처음 실행 방법은 **[START_HERE](on-client/student/START_HERE.md)**를 읽습니다. Windows·Node 24.19.0에서 외부 npm 의존성 없이 실행합니다.
 

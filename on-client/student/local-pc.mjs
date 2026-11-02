@@ -78,7 +78,8 @@ export async function readWindows({signal} = {}) {
   if (process.platform !== 'win32') throw Object.assign(Error('PC_UNSUPPORTED'),{code:'PC_UNSUPPORTED'});
   const executable = join(process.env.SystemRoot || 'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
   const script = fileURLToPath(new URL('./read-local-windows.ps1',import.meta.url));
-  const {stdout} = await execFileAsync(executable,['-NoLogo','-NoProfile','-NonInteractive','-File',script],
+  // 새 계정·새 PC의 기본 정책(Restricted)은 .ps1 실행을 막는다. 이 자식 프로세스에만 적용하며 PC 설정은 바꾸지 않는다.
+  const {stdout} = await execFileAsync(executable,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',script],
     {windowsHide:true, timeout:14000, maxBuffer:65536, encoding:'utf8', signal});
   return JSON.parse(stdout.replace(/^\uFEFF/, ''));
 }
