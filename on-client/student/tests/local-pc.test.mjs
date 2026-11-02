@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { request } from 'node:http';
 import { document } from './dom.mjs';
 import { cpuPercent, networkSummary, projectWindows, collectLocalPc } from '../local-pc.mjs';
@@ -121,6 +122,39 @@ test('키보드 초점은 조회 중 취소 버튼으로, 완료·취소 뒤 조
   stop.dispatch('click');assert.equal(document.activeElement,query);
   document.activeElement=null;const third=query.dispatch('click');d.resolve(sample());await third;
   assert.equal(document.activeElement,null); // 다른 곳에 있던 초점은 가져오지 않는다.
+});
+
+test('초기 연결 응답이 조회 중 도착해도 버튼을 교체하지 않고 취소 초점을 유지한다',async t=>{
+  const diagnostics=deferred(), snapshot=deferred(), diagnosticsStarted=deferred();
+  t.after(()=>snapshot.resolve({ok:false,status:503}));
+  const slot=document.createElement('main');
+  const savedFetch=globalThis.fetch, savedLookup=document.getElementById;
+  t.after(()=>{globalThis.fetch=savedFetch;if(savedLookup===undefined)delete document.getElementById;else document.getElementById=savedLookup;document.activeElement=null;});
+  document.getElementById=()=>slot;
+  globalThis.fetch=url=>{if(url==='/api/diagnostics'){diagnosticsStarted.resolve();return diagnostics.promise;}return snapshot.promise;};
+  const source=await readFile(new URL('../pc.mjs',import.meta.url),'utf8');
+  const moduleSource=source.replace("'/student/extension.mjs'",JSON.stringify(new URL('../extension.mjs',import.meta.url).href));
+  const startup=import('data:text/javascript;base64,'+Buffer.from(moduleSource).toString('base64'));
+  await diagnosticsStarted.promise;
+  const root=slot.children[0];const [query,stop]=root.all(e=>e.tag==='button');
+  query.focus();const pending=query.dispatch('click');assert.equal(document.activeElement,stop);
+  diagnostics.resolve({json:async()=>({ok:true,data:{engine:{mode:'disconnected'}}})});
+  await startup;
+  assert.equal(slot.children[0],root,'연결 응답이 기존 패널을 교체하면 안 된다');
+  assert.equal(document.activeElement,stop);assert.equal(stop.disabled,false);
+  assert.match(root.textContent,/SDP 미연결/);
+  stop.dispatch('click');assert.equal(document.activeElement,query);
+  snapshot.resolve({ok:true,status:200,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:true,data:sample()})});
+  await pending;assert.match(root.textContent,/조회를 취소/);assert.doesNotMatch(root.textContent,/37 %/);
+});
+
+test('연결 상태 갱신은 외부 초점을 가져오지 않고 조회 결과를 유지한다',async()=>{
+  const pc=createLocalPcController({readSnapshot:async()=>sample()});
+  const root=pc.render('unknown');await pc.refresh();
+  const outside=document.createElement('button');outside.focus();
+  pc.updateMode('disconnected');
+  assert.equal(document.activeElement,outside);assert.match(root.textContent,/37 %/);
+  assert.match(root.textContent,/SDP 미연결/);
 });
 
 test('부분 조회 실패는 정상 항목을 보존하며 실패 로그를 0건으로 표시하지 않는다',async()=>{

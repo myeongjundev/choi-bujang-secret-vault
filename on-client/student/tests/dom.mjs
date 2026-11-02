@@ -9,7 +9,7 @@ export class Element {
   set innerHTML(_) { throw Error('HTML sink forbidden'); }
   addEventListener(type, handler) { this.listeners[type] = handler; }
   dispatch(type) { if (!this.disabled) return this.listeners[type]?.({ target: this }); }
-  focus() { document.activeElement = this; }
+  focus() { if (!this.disabled) document.activeElement = this; }
   all(predicate) { return [this, ...this.children.flatMap(child => child.all(predicate))].filter(predicate); }
 }
 export const document = { activeElement: null, createElement: tag => new Element(tag) };

@@ -199,6 +199,8 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
   }
   return {
     refresh, cancel,
+    // 연결 진단 응답은 기존 컨트롤을 유지한 채 표시만 갱신한다.
+    updateMode(engineMode='unknown') { mode=engineMode;draw(); },
     render(engineMode='unknown') {
       mode=engineMode;
       const root=document.createElement('section');root.setAttribute('id','student-local-pc');root.setAttribute('class','local-pc');

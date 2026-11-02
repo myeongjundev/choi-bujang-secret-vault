@@ -9,7 +9,7 @@ try {
   const body=await response.json();
   const mode=body?.ok===true && ['connected','demo','disconnected'].includes(body.data?.engine?.mode)
     ? body.data.engine.mode : 'unknown';
-  slot.replaceChildren(pc.render(mode));
+  pc.updateMode(mode);
 } catch {
-  slot.replaceChildren(pc.render('unknown'));
+  pc.updateMode('unknown');
 }
