@@ -179,11 +179,13 @@ test('마지막 브라우저가 연결을 끊으면 수집을 중단하고 다�
   assert.equal(result.status,200);assert.equal(calls,2);
 });
 
-test('새 계정의 기본 PowerShell 실행 정책(Restricted)에서도 방화벽·기록 조회 스크립트를 실행한다',{skip:process.platform!=='win32'},async t=>{
-  // 실행 정책은 계정마다 다르다. 개발 계정의 RemoteSigned가 아니라 새 계정·새 PC의 기본값으로 확인한다.
+test('현재 Windows PC에서 Restricted 조건을 재현해 방화벽·System·Application 조회를 확인한다',{skip:process.platform!=='win32'},async t=>{
+  // 자식 프로세스가 상속할 정책만 설정한다. 실제 새 계정·다른 PC 검증은 아니다.
   const saved=process.env.PSExecutionPolicyPreference;
   t.after(()=>{if(saved===undefined)delete process.env.PSExecutionPolicyPreference;else process.env.PSExecutionPolicyPreference=saved;});
   process.env.PSExecutionPolicyPreference='Restricted';
   const s=await collectLocalPc({cpuIntervalMs:1});
-  assert.equal(s.resources.firewall.state,'ok');
+  for(const key of ['firewall','systemLog','applicationLog']) {
+    assert.equal(s.resources[key].state,'ok',`${key}: ${s.resources[key].code ?? 'unexpected state'}`);
+  }
 });
