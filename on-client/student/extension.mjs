@@ -81,9 +81,12 @@ export function createLocalPcController({readSnapshot,timeoutMs=22000} = {}) {
   }
   function draw() {
     if (!refs) return;
+    // 비활성화할 버튼에 있던 키보드 초점을 지금 누를 수 있는 버튼으로 옮긴다.
+    const focused=[refs.refresh,refs.cancel].includes(document.activeElement);
     refs.refresh.disabled=phase==='loading';
     refs.refresh.textContent=history.length ? 'PC 상태 다시 조회' : 'PC 상태 조회';
     refs.cancel.disabled=phase!=='loading';
+    if (focused) (phase==='loading'?refs.cancel:refs.refresh).focus();
     refs.body.setAttribute('aria-busy',String(phase==='loading'));
     refs.root.setAttribute('data-state',phase);
     refs.body.replaceChildren();

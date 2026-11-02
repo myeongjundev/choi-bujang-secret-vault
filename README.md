@@ -2,7 +2,7 @@
 
 ## 현재 실행 안내 · 2026-11-02
 
-제공 서버를 원복하고 학생 PC 진입점으로 실행을 분리했습니다. 11월 2일에는 PowerShell 실행 정책이 Restricted일 때 방화벽·Windows 기록 조회 스크립트가 차단되는 문제를 고쳤습니다. 현재 Windows PC에서 Restricted 조건을 재현해 학생 56개·이전 단계 88개 시험과 실제 PC 7/7을 확인했습니다. 실제 새 계정·다른 PC에서의 동작은 미검증입니다. 조회·취소·오류 복구 확인은 [수정·검증 기록](on-client/student/TROUBLESHOOTING-2026-11-01.md)을 따릅니다.
+제공 서버를 원복하고 학생 PC 진입점으로 실행을 분리했습니다. 11월 2일에는 PowerShell 실행 정책이 Restricted일 때 방화벽·Windows 기록 조회 스크립트가 차단되는 문제와, 조회 중 버튼이 비활성화되며 키보드 초점이 사라지는 문제를 고쳤습니다. 학생 57개·이전 단계 88개 시험과, 이 PC에서 Restricted 조건을 재현한 실제 PC 7/7을 확인했습니다. 실제 새 계정·다른 PC에서의 동작은 미검증입니다. 되는 것·안 되는 것과 근거는 [7일차 정리](on-client/student/DAY7.md), 조회·취소·오류 복구 확인은 [수정·검증 기록](on-client/student/TROUBLESHOOTING-2026-11-01.md)을 따릅니다.
 
 케셰브 PC 점검의 처음 실행 방법은 **[START_HERE](on-client/student/START_HERE.md)**를 읽습니다. Windows·Node 24.19.0에서 외부 npm 의존성 없이 실행합니다.
 

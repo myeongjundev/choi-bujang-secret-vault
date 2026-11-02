@@ -111,6 +111,18 @@ test('시간 초과 뒤 늦은 성공을 거절한다',async()=>{
   assert.match(root.textContent,/시간이 초과/);d.resolve(sample());await waiting;assert.doesNotMatch(root.textContent,/37 %/);
 });
 
+test('키보드 초점은 조회 중 취소 버튼으로, 완료·취소 뒤 조회 버튼으로 옮긴다',async()=>{
+  const d=deferred();let n=0;
+  const pc=createLocalPcController({readSnapshot:()=>++n===1?Promise.resolve(sample()):d.promise});
+  const [query,stop]=pc.render('disconnected').all(e=>e.tag==='button');
+  query.focus();const first=query.dispatch('click');assert.equal(document.activeElement,stop);
+  await first;assert.equal(document.activeElement,query);
+  query.dispatch('click');assert.equal(document.activeElement,stop);
+  stop.dispatch('click');assert.equal(document.activeElement,query);
+  document.activeElement=null;const third=query.dispatch('click');d.resolve(sample());await third;
+  assert.equal(document.activeElement,null); // 다른 곳에 있던 초점은 가져오지 않는다.
+});
+
 test('부분 조회 실패는 정상 항목을 보존하며 실패 로그를 0건으로 표시하지 않는다',async()=>{
   const s=sample();s.resources.systemLog={state:'unavailable',source:s.resources.systemLog.source,checkedAt:time,code:'PC_ACCESS_DENIED'};
   const pc=createLocalPcController({readSnapshot:async()=>s});const root=pc.render('disconnected');await pc.refresh();
